@@ -129,6 +129,7 @@
     function renderDetails(id) {
         const w = workers[id];
         if(!w) return;
+        document.getElementById('mainPage').classList.add('hidden');
         document.getElementById('detailsPage').classList.remove('hidden');
         document.getElementById('currentWorkerTitle').innerText = w.name;
        
