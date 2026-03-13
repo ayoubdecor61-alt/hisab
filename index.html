@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إدارة عمال الواجهات - النسخة الذكية</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <style>
+        :root { --bg: #f8f9fa; --card: #ffffff; --text: #212529; --accent: #007bff; --border: #ddd; --today-bg: rgba(255, 193, 7, 0.2); }
+        [data-theme="dark"] { --bg: #121212; --card: #1e1e1e; --text: #e0e0e0; --accent: #3793ff; --border: #333; --today-bg: rgba(255, 193, 7, 0.1); }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg); color: var(--text); padding: 10px; margin: 0; transition: 0.3s; }
+        .container { max-width: 500px; margin: auto; }
+        .theme-toggle { float: left; padding: 5px 12px; cursor: pointer; border-radius: 20px; border: 1px solid var(--border); background: var(--card); color: var(--text); font-size: 12px; margin-bottom: 10px; }
+        .card { background: var(--card); padding: 15px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-bottom: 15px; border: 1px solid var(--border); }
+        .status-bar { text-align:center; font-size:12px; padding: 8px; margin-bottom: 15px; border-radius: 10px; font-weight: bold; }
+        .worker-item { display: flex; justify-content: space-between; align-items: center; padding: 15px; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 10px; background: var(--card); cursor: pointer; font-weight: bold; }
+        .btn { padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; font-size: 16px; margin-top: 10px; }
+        input { width: 100%; padding: 10px; margin: 4px 0; border: 1px solid var(--border); border-radius: 8px; box-sizing: border-box; font-size: 16px; background: var(--card); color: var(--text); }
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        th, td { border: 1px solid var(--border); padding: 8px; text-align: center; font-size: 14px; }
+        th { background: rgba(0,0,0,0.05); }
+        /* ستايل السطر المميز لليوم الحالي */
+        .today-row { background-color: var(--today-bg) !important; border: 2px solid #ffc107 !important; }
+        .today-badge { background: #ffc107; color: #000; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; margin-right: 5px; vertical-align: middle; }
+        
+        .result-box { padding: 15px; border-radius: 10px; border-right: 6px solid var(--accent); margin-top: 15px; transition: 0.3s; }
+        .final-val { font-size: 24px; font-weight: bold; }
+        .hidden { display: none; }
+        .pos-amount { color: #d9534f !important; } 
+        .neg-amount { color: #28a745 !important; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <button class="theme-toggle" onclick="toggleTheme()">🌙 تبديل المظهر</button>
+    <div style="clear: both;"></div>
+    <div id="status" class="status-bar" style="background:#fff3cd; color:#856404;">🔄 جاري الاتصال...</div>
+
+    <div id="mainPage">
+        <h2 style="text-align: center;">إدارة ورشة أيوب</h2>
+        <div class="card">
+            <input type="text" id="newWorkerName" placeholder="اسم العامل الجديد...">
+            <button class="btn" style="background:var(--accent); color:white" onclick="addWorker()">+ إضافة عامل</button>
+        </div>
+        <div id="workersList"></div>
+    </div>
+
+    <div id="detailsPage" class="hidden">
+        <button class="btn" style="background:#6c757d; color:white; margin-bottom:15px;" onclick="showMain()">← رجوع</button>
+        <div class="card">
+            <h3 id="currentWorkerTitle">الحساب</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div><label>له قديم:</label><input type="number" id="oldHim" oninput="updateFirebase()"></div>
+                <div><label>عليه قديم:</label><input type="number" id="oldMe" oninput="updateFirebase()"></div>
+            </div>
+            <table>
+                <thead><tr><th>اليوم</th><th>أجر</th><th>سلفة</th></tr></thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+            <div id="resBox" class="result-box">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span>الصافي المطلوب:</span>
+                    <span id="finalResult" class="final-val">0</span>
+                </div>
+            </div>
+            <button class="btn" style="background:#28a745; color:white; margin-top:20px;" onclick="copyWorkerLink()">🔗 نسخ رابط العامل</button>
+            <button class="btn" style="background:transparent; color:#dc3545; border:1px solid #dc3545; margin-top:10px; font-size:11px;" onclick="deleteWorker()">حذف العامل</button>
+        </div>
+    </div>
+
+    <div id="workerViewPage" class="hidden">
+        <div class="card" style="border-top: 5px solid var(--accent);">
+            <h2 id="viewTitle" style="text-align:center;">كشف الحساب</h2>
+            <div id="viewDebts" style="display:flex; justify-content:space-between; margin-bottom:10px; padding:10px; background:rgba(0,0,0,0.03); border-radius:8px;"></div>
+            <table id="viewTable">
+                <thead><tr><th>اليوم</th><th>أجر</th><th>سلفة</th></tr></thead>
+                <tbody id="viewTableBody"></tbody>
+            </table>
+            <div id="viewResBox" class="result-box">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span>مستحقاتك الحالية:</span>
+                    <span id="viewFinal" class="final-val">0</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCQA5QZLrR5er6n6r1WKx2pG-PaOvdpgeg",
+      authDomain: "hisab-aluminium.firebaseapp.com",
+      databaseURL: "https://hisab-aluminium-default-rtdb.firebaseio.com/",
+      projectId: "hisab-aluminium",
+      storageBucket: "hisab-aluminium.firebasestorage.app",
+      messagingSenderId: "473859049478",
+      appId: "1:473859049478:web:dc9f77cb674c11ff2fdb87"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    let workers = {}, currentId = null;
+    const days = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
+
+    // وظيفة للحصول على اليوم الحالي باللغة العربية
+    function getTodayName() {
+        const d = new Date();
+        return days[d.getDay()];
+    }
+
+    function toggleTheme() {
+        const t = document.body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+        t === 'dark' ? document.body.setAttribute('data-theme', 'dark') : document.body.removeAttribute('data-theme');
+        localStorage.setItem('theme', t);
+    }
+    if(localStorage.getItem('theme') === 'dark') document.body.setAttribute('data-theme', 'dark');
+
+    db.ref('.info/connected').on('value', (s) => {
+        const b = document.getElementById('status');
+        if(s.val()) { b.innerHTML = "✅ متصل بالسحابة"; b.style.background = "#d4edda"; b.style.color = "#155724"; }
+    });
+
+    db.ref('workers').on('value', (s) => { workers = s.val() || {}; checkUrl(); });
+
+    function checkUrl() {
+        const id = new URLSearchParams(window.location.search).get('id');
+        if(id && workers[id]) renderWorkerView(id);
+        else if(!currentId) renderWorkersList();
+        else renderDetails(currentId);
+    }
+
+    function addWorker() {
+        const n = document.getElementById('newWorkerName').value;
+        if(n.trim()) db.ref('workers/' + Date.now()).set({name:n, h:0, m:0, rs:[0,0,0,0,0,0,0], as:[0,0,0,0,0,0,0]});
+        document.getElementById('newWorkerName').value = '';
+    }
+
+    function renderWorkersList() {
+        document.getElementById('mainPage').classList.remove('hidden');
+        document.getElementById('detailsPage').classList.add('hidden');
+        document.getElementById('workerViewPage').classList.add('hidden');
+        const l = document.getElementById('workersList'); l.innerHTML = '';
+        for(let id in workers) l.innerHTML += `<div class="worker-item" onclick="showDetails('${id}')">👤 ${workers[id].name} <span>←</span></div>`;
+    }
+
+    function showDetails(id) { currentId = id; renderDetails(id); }
+
+    function renderDetails(id) {
+        const w = workers[id]; if(!w) return;
+        const todayName = getTodayName();
+        // ترتيب الأيام ليكون السبت أولاً في العرض
+        const displayOrder = ["السبت", "الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة"];
+        
+        document.getElementById('mainPage').classList.add('hidden');
+        document.getElementById('detailsPage').classList.remove('hidden');
+        document.getElementById('currentWorkerTitle').innerText = w.name;
+        
+        if(document.activeElement.tagName !== 'INPUT') {
+            document.getElementById('oldHim').value = w.h || 0;
+            document.getElementById('oldMe').value = w.m || 0;
+            
+            document.getElementById('tableBody').innerHTML = displayOrder.map((d,i) => {
+                const isToday = (d === todayName);
+                const dayIndexInDB = days.indexOf(d); // لضمان ربط البيانات بالأيام بشكل صحيح
+                return `<tr class="${isToday ? 'today-row' : ''}">
+                    <td>${isToday ? '<span class="today-badge">اليوم</span>' : ''}${d}</td>
+                    <td><input type="number" class="r" data-idx="${dayIndexInDB}" value="${w.rs?.[dayIndexInDB]||0}" oninput="updateFirebase()"></td>
+                    <td><input type="number" class="a" data-idx="${dayIndexInDB}" value="${w.as?.[dayIndexInDB]||0}" oninput="updateFirebase()"></td>
+                </tr>`;
+            }).join('');
+        }
+        calc(w, 'finalResult');
+    }
+
+    function updateFirebase() {
+        const rs = new Array(7).fill(0);
+        const as = new Array(7).fill(0);
+        document.querySelectorAll('.r').forEach(input => rs[input.dataset.idx] = input.value || 0);
+        document.querySelectorAll('.a').forEach(input => as[input.dataset.idx] = input.value || 0);
+        
+        db.ref('workers/' + currentId).update({ 
+            h: document.getElementById('oldHim').value || 0, 
+            m: document.getElementById('oldMe').value || 0, 
+            rs, as 
+        });
+    }
+
+    function calc(w, elId) {
+        let r = (w.rs || []).reduce((a,b)=>parseFloat(a)+parseFloat(b),0);
+        let a = (w.as || []).reduce((a,b)=>parseFloat(a)+parseFloat(b),0);
+        let total = r + parseFloat(w.h||0) - a - parseFloat(w.m||0);
+        const el = document.getElementById(elId);
+        el.innerText = total.toLocaleString() + " د.ج";
+        el.className = total > 0 ? 'final-val pos-amount' : 'final-val neg-amount';
+    }
+
+    function copyWorkerLink() {
+        const link = window.location.origin + window.location.pathname + "?id=" + currentId;
+        const i = document.createElement('input'); document.body.appendChild(i); i.value = link; i.select(); document.execCommand('copy'); document.body.removeChild(i);
+        alert("✅ تم نسخ الرابط! أرسله للعامل.");
+    }
+
+    function renderWorkerView(id) {
+        const w = workers[id];
+        const todayName = getTodayName();
+        const displayOrder = ["السبت", "الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة"];
+        
+        document.getElementById('mainPage').classList.add('hidden');
+        document.getElementById('workerViewPage').classList.remove('hidden');
+        document.getElementById('viewTitle').innerText = w.name;
+        document.getElementById('viewDebts').innerHTML = `<span>له قديم: ${w.h}</span> <span>عليه قديم: ${w.m}</span>`;
+        
+        document.getElementById('viewTableBody').innerHTML = displayOrder.map((d,i)=>{
+            const isToday = (d === todayName);
+            const idx = days.indexOf(d);
+            return `<tr class="${isToday ? 'today-row' : ''}">
+                <td>${isToday ? '<span class="today-badge">اليوم</span>' : ''}${d}</td>
+                <td>${w.rs?.[idx]||0}</td>
+                <td>${w.as?.[idx]||0}</td>
+            </tr>`;
+        }).join('');
+        calc(w, 'viewFinal');
+    }
+
+    function deleteWorker() { if(confirm('حذف نهائي؟')) { db.ref('workers/'+currentId).remove(); showMain(); } }
+    function showMain() { currentId = null; window.history.replaceState({}, '', window.location.pathname); renderWorkersList(); }
+</script>
+</body>
+</html>
