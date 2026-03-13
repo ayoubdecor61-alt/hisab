@@ -106,16 +106,19 @@
             document.getElementById('mainPage').classList.add('hidden');
             document.getElementById('adminControls').classList.add('hidden');
             document.getElementById('adminActions').classList.add('hidden');
+            document.getElementById('detailsPage').classList.remove('hidden');
             renderDetails(currentId);
         } else if (!currentId) {
+            document.getElementById('mainPage').classList.remove('hidden');
+            document.getElementById('detailsPage').classList.add('hidden');
             renderList();
         } else {
+            document.getElementById('mainPage').classList.add('hidden');
+            document.getElementById('detailsPage').classList.remove('hidden');
             renderDetails(currentId);
         }
     }
     function renderList() {
-        document.getElementById('mainPage').classList.remove('hidden');
-        document.getElementById('detailsPage').classList.add('hidden');
         const list = document.getElementById('workersList');
         list.innerHTML = '';
         for (let id in workers) {
@@ -129,8 +132,6 @@
     function renderDetails(id) {
         const w = workers[id];
         if(!w) return;
-        document.getElementById('mainPage').classList.add('hidden');
-        document.getElementById('detailsPage').classList.remove('hidden');
         document.getElementById('currentWorkerTitle').innerText = w.name;
        
         const mH = document.getElementById('manualHaq');
@@ -203,9 +204,7 @@
     }
     function showMain() {
         currentId = null;
-        document.getElementById('detailsPage').classList.add('hidden');
-        document.getElementById('mainPage').classList.remove('hidden');
-        renderList();
+        render();
     }
     function shareLink() {
         const link = window.location.origin + window.location.pathname + "?view=" + currentId;
