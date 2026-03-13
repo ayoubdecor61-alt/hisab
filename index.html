@@ -3,96 +3,88 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ورشة أيوب - نسخة العمل الميداني</title>
+    <title>ورشة أيوب - النظام السحابي</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
-        :root { --bg: #f8f9fa; --card: #ffffff; --text: #212529; --accent: #007bff; --border: #ddd; --today-bg: rgba(255, 193, 7, 0.2); }
-        [data-theme="dark"] { --bg: #121212; --card: #1e1e1e; --text: #e0e0e0; --accent: #3793ff; --border: #333; --today-bg: rgba(255, 193, 7, 0.1); }
+        :root { --bg: #f4f7f6; --card: #ffffff; --text: #2d3436; --accent: #0984e3; --border: #dfe6e9; --today: #fff9db; --danger: #d63031; --success: #00b894; }
+        [data-theme="dark"] { --bg: #2d3436; --card: #353b48; --text: #f5f6fa; --accent: #45aaf2; --border: #4b4b4b; --today: #485460; }
         body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg); color: var(--text); padding: 10px; margin: 0; transition: 0.3s; }
         .container { max-width: 500px; margin: auto; }
-        .theme-toggle { float: left; padding: 5px 12px; cursor: pointer; border-radius: 20px; border: 1px solid var(--border); background: var(--card); color: var(--text); font-size: 12px; }
-        .card { background: var(--card); padding: 15px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-bottom: 15px; border: 1px solid var(--border); }
-        .status-bar { text-align:center; font-size:12px; padding: 8px; margin-bottom: 10px; border-radius: 10px; font-weight: bold; }
-        .week-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; background: var(--accent); color: white; padding: 10px; border-radius: 10px; }
-        .nav-btn { background: rgba(255,255,255,0.2); border: none; color: white; padding: 5px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .card { background: var(--card); padding: 15px; border-radius: 18px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); margin-bottom: 15px; border: 1px solid var(--border); }
+        .worker-title { text-align: center; font-size: 24px; font-weight: 900; color: var(--accent); margin: 5px 0 15px 0; }
+        .manual-entry { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 15px; background: rgba(0,0,0,0.02); padding: 10px; border-radius: 12px; }
+        .week-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; background: var(--accent); color: white; padding: 8px; border-radius: 10px; }
+        .nav-btn { background: rgba(255,255,255,0.25); border: none; color: white; padding: 5px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; }
         .worker-item { display: flex; justify-content: space-between; align-items: center; padding: 15px; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 10px; background: var(--card); cursor: pointer; font-weight: bold; }
-        .btn { padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; font-size: 16px; margin-top: 10px; }
-        input { width: 100%; padding: 10px; margin: 5px 0; border: 1px solid var(--border); border-radius: 8px; box-sizing: border-box; background: var(--card); color: var(--text); text-align: center; font-size: 16px; }
+        .btn { padding: 12px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; width: 100%; font-size: 15px; margin-top: 5px; }
+        .btn-main { background: var(--accent); color: white; }
+        .btn-share { background: #6c5ce7; color: white; }
+        input { width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--card); color: var(--text); text-align: center; }
         table { width: 100%; border-collapse: collapse; }
-        th, td { border: 1px solid var(--border); padding: 8px; text-align: center; font-size: 13px; }
-        .today-row { background-color: var(--today-bg) !important; border: 2px solid #ffc107 !important; }
-        .result-box { padding: 15px; border-radius: 10px; border-right: 6px solid var(--accent); margin-top: 15px; background: rgba(0,123,255,0.1); }
-        .final-val { font-size: 24px; font-weight: bold; }
-        .pos-amount { color: #d9534f; } .neg-amount { color: #28a745; }
+        th, td { border: 1px solid var(--border); padding: 6px; text-align: center; font-size: 12px; }
+        .today-row { background-color: var(--today) !important; font-weight: bold; }
+        .final-box { margin-top: 15px; padding: 12px; border-radius: 12px; text-align: center; border: 2px solid var(--accent); background: rgba(9, 132, 227, 0.05); }
+        .final-amount { font-size: 22px; font-weight: 900; }
+        .pos { color: var(--success); } .neg { color: var(--danger); }
         .hidden { display: none; }
-        .offline-badge { background: #dc3545 !important; color: white !important; }
+        .view-only-text { font-weight: bold; color: var(--text); }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <button class="theme-toggle" onclick="toggleTheme()">🌙 مظهر</button>
-    <div style="clear: both; height: 5px;"></div>
-    
-    <div id="status" class="status-bar" style="background:#eee; color:#666;">⏳ جاري التحميل...</div>
+    <div id="status" style="font-size: 10px; text-align: center; padding: 5px;">جاري الاتصال بالسحابة...</div>
 
     <div id="mainPage">
-        <h2 style="text-align: center;">إدارة ورشة أيوب</h2>
+        <div class="header"><h3>ورشة أيوب</h3><button onclick="toggleTheme()">🌙</button></div>
         <div class="card">
-            <input type="text" id="newWorkerName" placeholder="اسم العامل الجديد..." style="text-align: right;">
-            <button class="btn" style="background:var(--accent); color:white" onclick="addWorker()">+ حفظ العامل</button>
+            <input type="text" id="newWorkerName" placeholder="اسم العامل الجديد...">
+            <button class="btn btn-main" onclick="addWorker()">+ إضافة عامل</button>
         </div>
         <div id="workersList"></div>
     </div>
 
     <div id="detailsPage" class="hidden">
-        <button class="btn" style="background:#6c757d; color:white; margin-bottom:10px;" onclick="showMain()">← رجوع</button>
-        <div class="week-nav">
-            <button class="nav-btn" onclick="changeWeek(-1)">◀ السابق</button>
-            <span id="weekLabel" style="font-weight:bold;">الأسبوع الحالي</span>
-            <button class="nav-btn" onclick="changeWeek(1)">التالي ▶</button>
+        <div id="adminControls">
+            <button class="btn" style="background:#636e72; color:white; width:auto; padding:5px 15px;" onclick="showMain()">← رجوع</button>
         </div>
+        
+        <h2 id="currentWorkerTitle" class="worker-title">اسم العامل</h2>
+
+        <div class="manual-entry">
+            <div><label style="font-size:10px;">حق له سابق (+)</label><input type="number" id="manualHaq" oninput="updateManual()"></div>
+            <div><label style="font-size:10px;">دين عليه سابق (-)</label><input type="number" id="manualDin" oninput="updateManual()"></div>
+        </div>
+
+        <div class="week-nav">
+            <button class="nav-btn" id="prevBtn" onclick="changeWeek(-1)">◀</button>
+            <span id="weekLabel">الأسبوع الحالي</span>
+            <button class="nav-btn" id="nextBtn" onclick="changeWeek(1)">▶</button>
+        </div>
+
         <div class="card">
-            <h3 id="currentWorkerTitle" style="margin:0 0 10px 0;">الحساب</h3>
             <table>
-                <thead><tr><th>اليوم</th><th>أجر</th><th>سلفة</th></tr></thead>
+                <thead><tr><th>اليوم</th><th>أجر</th><th>سلفة</th><th>ملاحظة</th></tr></thead>
                 <tbody id="tableBody"></tbody>
             </table>
-            <div class="result-box">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span>الصافي التراكمي:</span>
-                    <span id="finalResult" class="final-val">0</span>
-                </div>
+            
+            <div class="final-box">
+                <span style="font-size:11px;">الصافي الإجمالي المستحق:</span>
+                <div id="finalResult" class="final-amount">0 د.ج</div>
             </div>
-            <button class="btn" style="background:#28a745; color:white; margin-top:20px;" onclick="copyWorkerLink()">🔗 نسخ رابط العامل</button>
-            <button class="btn" style="background:transparent; color:#dc3545; border:1px solid #dc3545; margin-top:10px; font-size:11px;" onclick="deleteWorker()">حذف العامل</button>
-        </div>
-    </div>
 
-    <div id="workerViewPage" class="hidden">
-        <div class="week-nav">
-            <button class="nav-btn" onclick="changeWeek(-1)">◀ السابق</button>
-            <span id="viewWeekLabel" style="font-weight:bold;">الأسبوع الحالي</span>
-            <button class="nav-btn" onclick="changeWeek(1)">التالي ▶</button>
-        </div>
-        <div class="card">
-            <h2 id="viewTitle" style="text-align:center; margin-top:0;">كشف حسابك</h2>
-            <table id="viewTable">
-                <thead><tr><th>اليوم</th><th>أجر</th><th>سلفة</th></tr></thead>
-                <tbody id="viewTableBody"></tbody>
-            </table>
-            <div class="result-box">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span>إجمالي مستحقاتك:</span>
-                    <span id="viewFinal" class="final-val">0</span>
-                </div>
+            <div id="adminActions">
+                <button class="btn btn-share" style="margin-top:15px;" onclick="shareWorkerLink()">🔗 مشاركة الحساب مع العامل</button>
+                <button class="btn" style="background:var(--danger); color:white; margin-top:10px;" onclick="resetAccount()">🔄 تصفير الحساب</button>
             </div>
         </div>
     </div>
 </div>
 
 <script>
+    // 1. إعدادات Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyCQA5QZLrR5er6n6r1WKx2pG-PaOvdpgeg",
       authDomain: "hisab-aluminium.firebaseapp.com",
@@ -106,165 +98,144 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     
-    let workers = JSON.parse(localStorage.getItem('localWorkers')) || {};
-    let currentId = null, weekOffset = 0;
+    let workers = {}, currentId = null, weekOffset = 0, isViewOnly = false;
     const days = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
     const displayOrder = ["السبت", "الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة"];
 
-    // فحص الاتصال وتغيير الواجهة
-    const statusEl = document.getElementById('status');
-    db.ref('.info/connected').on('value', (snap) => {
-        if (snap.val() === true) {
-            statusEl.innerHTML = "✅ متصل (تمت مزامنة البيانات)";
-            statusEl.className = "status-bar";
-            statusEl.style.background = "#d4edda"; statusEl.style.color = "#155724";
-        } else {
-            statusEl.innerHTML = "⚠️ وضع عدم الاتصال (يتم الحفظ في الهاتف)";
-            statusEl.className = "status-bar offline-badge";
-        }
-    });
-
-    // جلب البيانات مع التخزين المحلي
-    db.ref('workers').on('value', (snap) => {
-        if(snap.val()){
-            workers = snap.val();
-            localStorage.setItem('localWorkers', JSON.stringify(workers)); // حفظ نسخة في الهاتف
-            render();
-        }
-    });
-
-    function getWeekId(offset = 0) {
-        const d = new Date();
-        d.setDate(d.getDate() + (offset * 7));
-        const day = d.getDay();
-        const diff = d.getDate() - day + (day === 6 ? 0 : -1); 
-        const sunday = new Date(d.setDate(diff));
-        return sunday.toISOString().split('T')[0];
+    // فحص الرابط (هل هو للمشاهدة فقط؟)
+    const urlParams = new URLSearchParams(window.location.search);
+    const viewId = urlParams.get('view');
+    if(viewId) {
+        currentId = viewId;
+        isViewOnly = true;
+        document.getElementById('mainPage').classList.add('hidden');
+        document.getElementById('adminControls').classList.add('hidden');
+        document.getElementById('adminActions').classList.add('hidden');
     }
 
-    function toggleTheme() {
-        const t = document.body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-        t === 'dark' ? document.body.setAttribute('data-theme', 'dark') : document.body.removeAttribute('data-theme');
-        localStorage.setItem('theme', t);
-    }
-    if(localStorage.getItem('theme') === 'dark') document.body.setAttribute('data-theme', 'dark');
+    // مزامنة البيانات
+    db.ref('workers').on('value', (snapshot) => {
+        workers = snapshot.val() || {};
+        document.getElementById('status').innerHTML = "✅ متصل بالسحابة";
+        render();
+    });
 
     function render() {
-        const urlId = new URLSearchParams(window.location.search).get('id');
-        if(urlId && workers[urlId]) renderWorkerView(urlId);
-        else if(!currentId) renderWorkersList();
+        if (!currentId) renderList();
         else renderDetails(currentId);
     }
 
-    function addWorker() {
-        const n = document.getElementById('newWorkerName').value;
-        if(!n.trim()) return;
-        const newId = Date.now();
-        // الحفظ في Firebase (سيعمل فورياً حتى لو كنت أوفلاين وسينتظر الإنترنت)
-        db.ref('workers/' + newId).set({ name: n });
-        document.getElementById('newWorkerName').value = '';
-    }
-
-    function renderWorkersList() {
-        document.getElementById('mainPage').classList.remove('hidden');
-        document.getElementById('detailsPage').classList.add('hidden');
-        document.getElementById('workerViewPage').classList.add('hidden');
-        const l = document.getElementById('workersList'); l.innerHTML = '';
-        for(let id in workers) {
-            l.innerHTML += `<div class="worker-item" onclick="showDetails('${id}')"><span>👤 ${workers[id].name}</span> <span>←</span></div>`;
+    function renderList() {
+        if(isViewOnly) return;
+        const list = document.getElementById('workersList');
+        list.innerHTML = '';
+        for (let id in workers) {
+            const div = document.createElement('div');
+            div.className = 'worker-item';
+            div.onclick = () => { currentId = id; weekOffset = 0; render(); };
+            div.innerHTML = `<span>👤 ${workers[id].name}</span> <span>←</span>`;
+            list.appendChild(div);
         }
-    }
-
-    function showDetails(id) { currentId = id; weekOffset = 0; renderDetails(id); }
-
-    function changeWeek(dir) { 
-        weekOffset += dir; 
-        render();
     }
 
     function renderDetails(id) {
-        const w = workers[id]; if(!w) return;
-        document.getElementById('mainPage').classList.add('hidden');
+        const w = workers[id];
+        if(!w) return;
         document.getElementById('detailsPage').classList.remove('hidden');
         document.getElementById('currentWorkerTitle').innerText = w.name;
-        document.getElementById('weekLabel').innerText = weekOffset === 0 ? "الأسبوع الحالي" : "أسبوع " + getWeekId(weekOffset);
         
-        const weekId = getWeekId(weekOffset);
-        const weekData = (w.weeks && w.weeks[weekId]) || {rs:[0,0,0,0,0,0,0], as:[0,0,0,0,0,0,0]};
-        const todayName = days[new Date().getDay()];
+        // الخانات العلوية
+        const mH = document.getElementById('manualHaq');
+        const mD = document.getElementById('manualDin');
+        mH.value = w.manualHaq || 0; mD.value = w.manualDin || 0;
+        if(isViewOnly) { mH.disabled = true; mD.disabled = true; }
 
-        document.getElementById('tableBody').innerHTML = displayOrder.map((d) => {
-            const isToday = (d === todayName && weekOffset === 0);
-            const idx = days.indexOf(d);
-            return `<tr class="${isToday ? 'today-row' : ''}">
-                <td>${isToday ? '⭐ ' : ''}${d}</td>
-                <td><input type="number" class="r" data-idx="${idx}" value="${weekData.rs?.[idx]||0}" oninput="updateFirebase()"></td>
-                <td><input type="number" class="a" data-idx="${idx}" value="${weekData.as?.[idx]||0}" oninput="updateFirebase()"></td>
-            </tr>`;
-        }).join('');
-        calculateTotal(w);
+        const weekId = getWeekId(weekOffset);
+        const weekData = (w.weeks && w.weeks[weekId]) || { rs: Array(7).fill(0), as: Array(7).fill(0), notes: Array(7).fill("") };
+        
+        const tbody = document.getElementById('tableBody');
+        tbody.innerHTML = '';
+        displayOrder.forEach(dayName => {
+            const idx = days.indexOf(dayName);
+            const r = weekData.rs[idx] || 0;
+            const a = weekData.as[idx] || 0;
+            const n = weekData.notes ? weekData.notes[idx] || "" : "";
+            
+            const tr = document.createElement('tr');
+            if(dayName === days[new Date().getDay()] && weekOffset === 0) tr.className = 'today-row';
+            
+            if(isViewOnly) {
+                tr.innerHTML = `<td>${dayName}</td><td class="pos">${r}</td><td class="neg">${a}</td><td style="font-size:10px">${n}</td>`;
+            } else {
+                tr.innerHTML = `
+                    <td>${dayName}</td>
+                    <td><input type="number" value="${r}" onchange="updateVal(${idx}, 'rs', this.value)"></td>
+                    <td><input type="number" value="${a}" onchange="updateVal(${idx}, 'as', this.value)"></td>
+                    <td><input type="text" value="${n}" onchange="updateVal(${idx}, 'notes', this.value)"></td>`;
+            }
+            tbody.appendChild(tr);
+        });
+        calculateGrandTotal(w);
     }
 
-    function updateFirebase() {
-        if(!currentId) return;
-        const rs = new Array(7).fill(0);
-        const as = new Array(7).fill(0);
-        document.querySelectorAll('.r').forEach(i => rs[i.dataset.idx] = i.value || 0);
-        document.querySelectorAll('.a').forEach(i => as[i.dataset.idx] = i.value || 0);
-        const weekId = getWeekId(weekOffset);
-        
-        // تحديث محلي فوري
-        if(!workers[currentId].weeks) workers[currentId].weeks = {};
-        workers[currentId].weeks[weekId] = {rs, as};
-        localStorage.setItem('localWorkers', JSON.stringify(workers));
-        
-        // إرسال لـ Firebase
-        db.ref(`workers/${currentId}/weeks/${weekId}`).update({ rs, as });
-        calculateTotal(workers[currentId]);
+    function updateVal(idx, type, val) {
+        const wid = getWeekId(weekOffset);
+        db.ref(`workers/${currentId}/weeks/${wid}/${type}/${idx}`).set(val);
     }
 
-    function calculateTotal(w) {
-        let total = 0;
+    function updateManual() {
+        const h = document.getElementById('manualHaq').value;
+        const d = document.getElementById('manualDin').value;
+        db.ref(`workers/${currentId}/manualHaq`).set(h);
+        db.ref(`workers/${currentId}/manualDin`).set(d);
+    }
+
+    function calculateGrandTotal(w) {
+        let total = (parseFloat(w.manualHaq) || 0) - (parseFloat(w.manualDin) || 0);
         if(w.weeks) {
             for(let wid in w.weeks) {
-                const week = w.weeks[wid];
-                const rSum = (week.rs || []).reduce((a,b)=>parseFloat(a||0)+parseFloat(b||0),0);
-                const aSum = (week.as || []).reduce((a,b)=>parseFloat(a||0)+parseFloat(b||0),0);
-                total += (rSum - aSum);
+                const rS = (w.weeks[wid].rs || []).reduce((a,b)=>parseFloat(a||0)+parseFloat(b||0), 0);
+                const aS = (w.weeks[wid].as || []).reduce((a,b)=>parseFloat(a||0)+parseFloat(b||0), 0);
+                total += (rS - aS);
             }
         }
-        const els = [document.getElementById('finalResult'), document.getElementById('viewFinal')];
-        els.forEach(el => { if(el) { el.innerText = total.toLocaleString() + " د.ج"; el.className = total > 0 ? 'final-val pos-amount' : 'final-val neg-amount'; } });
+        document.getElementById('finalResult').innerText = total.toLocaleString() + " د.ج";
+        document.getElementById('finalResult').className = 'final-amount ' + (total >= 0 ? 'pos' : 'neg');
     }
 
-    function renderWorkerView(id) {
-        const w = workers[id]; if(!w) return;
-        document.getElementById('mainPage').classList.add('hidden');
-        document.getElementById('workerViewPage').classList.remove('hidden');
-        document.getElementById('viewTitle').innerText = w.name;
-        document.getElementById('viewWeekLabel').innerText = weekOffset === 0 ? "الأسبوع الحالي" : "أسبوع " + getWeekId(weekOffset);
-        const weekId = getWeekId(weekOffset);
-        const weekData = (w.weeks && w.weeks[weekId]) || {rs:[0,0,0,0,0,0,0], as:[0,0,0,0,0,0,0]};
-        const todayName = days[new Date().getDay()];
-        document.getElementById('viewTableBody').innerHTML = displayOrder.map((d)=>{
-            const isToday = (d === todayName && weekOffset === 0);
-            const idx = days.indexOf(d);
-            return `<tr class="${isToday ? 'today-row' : ''}"><td>${isToday ? '⭐ ' : ''}${d}</td><td>${weekData.rs?.[idx]||0}</td><td>${weekData.as?.[idx]||0}</td></tr>`;
-        }).join('');
-        calculateTotal(w);
+    function addWorker() {
+        const name = document.getElementById('newWorkerName').value.trim();
+        if(name) {
+            const newRef = db.ref('workers').push();
+            newRef.set({ name: name, manualHaq: 0, manualDin: 0 });
+            document.getElementById('newWorkerName').value = '';
+        }
     }
 
-    function copyWorkerLink() {
-        const link = window.location.origin + window.location.pathname + "?id=" + currentId;
-        const i = document.createElement('input'); document.body.appendChild(i); i.value = link; i.select(); document.execCommand('copy'); document.body.removeChild(i);
-        alert("✅ تم نسخ الرابط!");
+    function shareWorkerLink() {
+        const shareLink = window.location.origin + window.location.pathname + "?view=" + currentId;
+        const tempInput = document.createElement("input");
+        document.body.appendChild(tempInput);
+        tempInput.value = shareLink;
+        tempInput.select();
+        document.execCommand("copy");
+        document.body.removeChild(tempInput);
+        alert("تم نسخ رابط المشاهدة! أرسله للعامل عبر فايبر أو واتساب.");
     }
 
-    function deleteWorker() { if(confirm('حذف نهائي؟')) { db.ref('workers/' + currentId).remove(); showMain(); } }
-    function showMain() { currentId = null; window.history.replaceState({}, '', window.location.pathname); renderWorkersList(); }
-    
-    // تشغيل الرندر الأولي من البيانات المحلية إذا وجدت
-    render();
+    function getWeekId(offset = 0) {
+        const d = new Date(); d.setDate(d.getDate() + (offset * 7));
+        const day = d.getDay(); const diff = d.getDate() - day + (day === 6 ? 0 : -1);
+        return new Date(d.setDate(diff)).toISOString().split('T')[0];
+    }
+
+    function changeWeek(dir) { weekOffset += dir; render(); }
+    function showMain() { currentId = null; document.getElementById('detailsPage').classList.add('hidden'); render(); }
+    function resetAccount() { if(confirm("تصفير كامل؟")) db.ref(`workers/${currentId}/weeks`).remove(); }
+    function toggleTheme() {
+        const t = document.body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+        document.body.setAttribute('data-theme', t);
+    }
 </script>
 </body>
 </html>
