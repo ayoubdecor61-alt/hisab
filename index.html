@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ورشة أيوب - النظام السحابي الشامل</title>
+    <title>ورشة أيوب - النظام السحابي</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <style>
@@ -14,20 +14,14 @@
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
         .card { background: var(--card); padding: 15px; border-radius: 18px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); margin-bottom: 15px; border: 1px solid var(--border); }
         .worker-title { text-align: center; font-size: 26px; font-weight: 900; color: var(--accent); margin: 5px 0 10px 0; border-bottom: 2px solid var(--accent); padding-bottom: 5px; }
-        
-        /* خانات الدين والحق العلوي */
         .manual-entry { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 15px; background: rgba(0,0,0,0.02); padding: 10px; border-radius: 12px; }
         .manual-entry label { font-size: 11px; display: block; margin-bottom: 3px; font-weight: bold; text-align: center; }
-        
         .week-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; background: var(--accent); color: white; padding: 8px; border-radius: 10px; }
         .nav-btn { background: rgba(255,255,255,0.25); border: none; color: white; padding: 5px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; }
-        .worker-item { display: flex; justify-content: space-between; align-items: center; padding: 15px; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 10px; background: var(--card); cursor: pointer; font-weight: bold; }
-        
+        .worker-item { display: flex; justify-content: space-between; align-items: center; padding: 18px; border: 1px solid var(--border); border-radius: 14px; margin-bottom: 10px; background: var(--card); cursor: pointer; font-weight: bold; font-size: 16px; box-shadow: 0 2px 5px rgba(0,0,0,0.03); }
         .btn { padding: 12px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; width: 100%; font-size: 15px; margin-top: 5px; }
         .btn-main { background: var(--accent); color: white; }
         .btn-share { background: #6c5ce7; color: white; }
-        .btn-danger { background: var(--danger); color: white; }
-
         input { width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--card); color: var(--text); text-align: center; font-size: 14px; }
         table { width: 100%; border-collapse: collapse; }
         th, td { border: 1px solid var(--border); padding: 5px; text-align: center; font-size: 12px; }
@@ -35,44 +29,38 @@
         .final-box { margin-top: 15px; padding: 12px; border-radius: 12px; text-align: center; border: 2px solid var(--accent); background: rgba(9, 132, 227, 0.05); }
         .final-amount { font-size: 24px; font-weight: 900; }
         .pos { color: var(--success); } .neg { color: var(--danger); }
-        .hidden { display: none; }
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div id="status" style="font-size: 10px; text-align: center; padding: 5px; opacity: 0.5;">جاري الاتصال...</div>
+    <div id="status" style="font-size: 10px; text-align: center; padding: 5px; opacity: 0.5;">جاري الاتصال بالسحابة...</div>
 
     <div id="mainPage">
-        <div class="header"><h3>إدارة ورشة أيوب</h3><button onclick="toggleTheme()" style="border:none; background:none; cursor:pointer; font-size:20px;">🌙</button></div>
+        <div class="header"><h3>ورشة أيوب للألمنيوم</h3><button onclick="toggleTheme()" style="border:none; background:none; cursor:pointer; font-size:20px;">🌙</button></div>
         <div class="card">
             <input type="text" id="newWorkerName" placeholder="أدخل اسم العامل الجديد...">
-            <button class="btn btn-main" onclick="addWorker()">+ إضافة عامل للقائمة</button>
+            <button class="btn btn-main" onclick="addWorker()">+ إضافة عامل جديد</button>
         </div>
         <div id="workersList"></div>
     </div>
 
     <div id="detailsPage" class="hidden">
         <div id="adminControls">
-            <button class="btn" style="background:#636e72; color:white; width:auto; padding:5px 15px; font-size:12px;" onclick="showMain()">← القائمة الرئيسية</button>
+            <button class="btn" style="background:#636e72; color:white; width:auto; padding:8px 20px; font-size:12px;" onclick="showMain()">← رجوع للقائمة</button>
         </div>
         
-        <h2 id="currentWorkerTitle" class="worker-title">اسم العامل</h2>
+        <h2 id="currentWorkerTitle" class="worker-title">...</h2>
 
         <div class="manual-entry">
-            <div>
-                <label class="pos">حق له سابق (+)</label>
-                <input type="number" id="manualHaq" oninput="updateManual()">
-            </div>
-            <div>
-                <label class="neg">دين عليه سابق (-)</label>
-                <input type="number" id="manualDin" oninput="updateManual()">
-            </div>
+            <div><label class="pos">حق له سابق (+)</label><input type="number" id="manualHaq" onchange="updateManual()"></div>
+            <div><label class="neg">دين عليه سابق (-)</label><input type="number" id="manualDin" onchange="updateManual()"></div>
         </div>
 
         <div class="week-nav">
             <button class="nav-btn" onclick="changeWeek(-1)">◀ السابق</button>
-            <span id="weekLabel" style="font-size:12px;">الأسبوع الحالي</span>
+            <span id="weekLabel">الأسبوع الحالي</span>
             <button class="nav-btn" onclick="changeWeek(1)">التالي ▶</button>
         </div>
 
@@ -83,21 +71,20 @@
             </table>
             
             <div class="final-box">
-                <span style="font-size:11px; font-weight:bold;">الصافي النهائي (شامل كل شيء):</span>
+                <span style="font-size:11px; font-weight:bold;">الصافي النهائي:</span>
                 <div id="finalResult" class="final-amount">0 د.ج</div>
             </div>
 
             <div id="adminActions">
-                <button class="btn btn-share" style="margin-top:15px;" onclick="shareLink()">🔗 مشاركة الحساب مع العامل</button>
-                <button class="btn btn-danger" style="margin-top:10px;" onclick="resetAccount()">🔄 تصفير الحساب (مسح الكل)</button>
-                <button class="btn" style="background:transparent; color:var(--danger); border:1px solid var(--danger); font-size:11px; margin-top:10px;" onclick="deleteWorker()">حذف العامل نهائياً</button>
+                <button class="btn btn-share" style="margin-top:15px;" onclick="shareLink()">🔗 مشاركة الحساب</button>
+                <button class="btn" style="background:var(--danger); color:white; margin-top:10px;" onclick="resetAccount()">🔄 تصفير الحساب</button>
+                <button class="btn" style="background:transparent; color:var(--danger); border:1px solid var(--danger); font-size:11px; margin-top:10px;" onclick="deleteWorker()">حذف العامل</button>
             </div>
         </div>
     </div>
 </div>
 
 <script>
-    // 1. إعدادات Firebase الخاصة بك
     const firebaseConfig = {
       apiKey: "AIzaSyCQA5QZLrR5er6n6r1WKx2pG-PaOvdpgeg",
       authDomain: "hisab-aluminium.firebaseapp.com",
@@ -105,167 +92,4 @@
       projectId: "hisab-aluminium",
       storageBucket: "hisab-aluminium.firebasestorage.app",
       messagingSenderId: "473859049478",
-      appId: "1:473859049478:web:dc9f77cb674c11ff2fdb87"
-    };
-
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-    
-    let workers = {}, currentId = null, weekOffset = 0, isViewOnly = false;
-    const days = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
-    const displayOrder = ["السبت", "الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة"];
-
-    // فحص وضع المشاهدة
-    const urlParams = new URLSearchParams(window.location.search);
-    const viewId = urlParams.get('view');
-    if(viewId) {
-        currentId = viewId;
-        isViewOnly = true;
-        document.getElementById('mainPage').classList.add('hidden');
-        document.getElementById('adminControls').classList.add('hidden');
-        document.getElementById('adminActions').classList.add('hidden');
-    }
-
-    // جلب البيانات ومزامنتها
-    db.ref('workers').on('value', (snap) => {
-        workers = snap.val() || {};
-        document.getElementById('status').innerHTML = "✅ متصل سحابياً";
-        render();
-    });
-
-    function render() {
-        if (!currentId) renderList();
-        else renderDetails(currentId);
-    }
-
-    function renderList() {
-        if(isViewOnly) return;
-        const list = document.getElementById('workersList');
-        list.innerHTML = '';
-        for (let id in workers) {
-            const div = document.createElement('div');
-            div.className = 'worker-item';
-            div.onclick = () => { currentId = id; weekOffset = 0; render(); };
-            div.innerHTML = `<span>👤 ${workers[id].name}</span> <span>←</span>`;
-            list.appendChild(div);
-        }
-    }
-
-    function renderDetails(id) {
-        const w = workers[id];
-        if(!w) return;
-        document.getElementById('mainPage').classList.add('hidden');
-        document.getElementById('detailsPage').classList.remove('hidden');
-        document.getElementById('currentWorkerTitle').innerText = w.name;
-        
-        // تحديث ماله وما عليه العلوية
-        const mH = document.getElementById('manualHaq');
-        const mD = document.getElementById('manualDin');
-        mH.value = w.manualHaq || 0; 
-        mD.value = w.manualDin || 0;
-        if(isViewOnly) { mH.disabled = true; mD.disabled = true; }
-
-        document.getElementById('weekLabel').innerText = weekOffset === 0 ? "الأسبوع الحالي" : "منذ " + Math.abs(weekOffset) + " أسابيع";
-
-        const weekId = getWeekId(weekOffset);
-        const weekData = (w.weeks && w.weeks[weekId]) || { rs: Array(7).fill(0), as: Array(7).fill(0), notes: Array(7).fill("") };
-        
-        const tbody = document.getElementById('tableBody');
-        tbody.innerHTML = '';
-        displayOrder.forEach(dayName => {
-            const idx = days.indexOf(dayName);
-            const r = weekData.rs ? weekData.rs[idx] || 0 : 0;
-            const a = weekData.as ? weekData.as[idx] || 0 : 0;
-            const n = weekData.notes ? weekData.notes[idx] || "" : "";
-            
-            const tr = document.createElement('tr');
-            if(dayName === days[new Date().getDay()] && weekOffset === 0) tr.className = 'today-row';
-            
-            if(isViewOnly) {
-                tr.innerHTML = `<td>${dayName}</td><td class="pos">${r}</td><td class="neg">${a}</td><td style="font-size:10px">${n}</td>`;
-            } else {
-                tr.innerHTML = `
-                    <td>${dayName}</td>
-                    <td><input type="number" value="${r}" onchange="updateVal(${idx}, 'rs', this.value)"></td>
-                    <td><input type="number" value="${a}" onchange="updateVal(${idx}, 'as', this.value)"></td>
-                    <td><input type="text" value="${n}" placeholder="..." onchange="updateVal(${idx}, 'notes', this.value)"></td>`;
-            }
-            tbody.appendChild(tr);
-        });
-        calculateTotal(w);
-    }
-
-    function updateVal(idx, type, val) {
-        const wid = getWeekId(weekOffset);
-        db.ref(`workers/${currentId}/weeks/${wid}/${type}/${idx}`).set(val);
-    }
-
-    function updateManual() {
-        const h = document.getElementById('manualHaq').value || 0;
-        const d = document.getElementById('manualDin').value || 0;
-        db.ref(`workers/${currentId}/manualHaq`).set(h);
-        db.ref(`workers/${currentId}/manualDin`).set(d);
-    }
-
-    function calculateTotal(w) {
-        let total = (parseFloat(w.manualHaq) || 0) - (parseFloat(w.manualDin) || 0);
-        if(w.weeks) {
-            for(let wid in w.weeks) {
-                const rSum = (w.weeks[wid].rs || []).reduce((a,b)=>parseFloat(a||0)+parseFloat(b||0), 0);
-                const aSum = (w.weeks[wid].as || []).reduce((a,b)=>parseFloat(a||0)+parseFloat(b||0), 0);
-                total += (rSum - aSum);
-            }
-        }
-        const res = document.getElementById('finalResult');
-        res.innerText = total.toLocaleString() + " د.ج";
-        res.className = 'final-amount ' + (total >= 0 ? 'pos' : 'neg');
-    }
-
-    function addWorker() {
-        const name = document.getElementById('newWorkerName').value.trim();
-        if(name) {
-            db.ref('workers').push({ name: name, manualHaq: 0, manualDin: 0 });
-            document.getElementById('newWorkerName').value = '';
-        }
-    }
-
-    function shareLink() {
-        const link = window.location.origin + window.location.pathname + "?view=" + currentId;
-        const el = document.createElement('textarea');
-        el.value = link; document.body.appendChild(el); el.select();
-        document.execCommand('copy'); document.body.removeChild(el);
-        alert("تم نسخ الرابط للمشاهدة فقط! أرسله للعامل الآن.");
-    }
-
-    function resetAccount() {
-        if(confirm("هل تريد تصفير جميع الأسابيع والديون السابقة لهذا العامل؟")) {
-            db.ref(`workers/${currentId}/weeks`).remove();
-            db.ref(`workers/${currentId}/manualHaq`).set(0);
-            db.ref(`workers/${currentId}/manualDin`).set(0);
-        }
-    }
-
-    function deleteWorker() {
-        if(confirm("حذف العامل نهائياً من النظام؟")) {
-            db.ref(`workers/${currentId}`).remove();
-            showMain();
-        }
-    }
-
-    function getWeekId(offset = 0) {
-        const d = new Date(); d.setDate(d.getDate() + (offset * 7));
-        const day = d.getDay(); const diff = d.getDate() - day + (day === 6 ? 0 : -1);
-        return new Date(d.setDate(diff)).toISOString().split('T')[0];
-    }
-
-    function changeWeek(dir) { weekOffset += dir; render(); }
-    function showMain() { currentId = null; document.getElementById('detailsPage').classList.add('hidden'); render(); }
-    function toggleTheme() {
-        const t = document.body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-        document.body.setAttribute('data-theme', t);
-        localStorage.setItem('ayoub_theme', t);
-    }
-    if (localStorage.getItem('ayoub_theme') === 'dark') document.body.setAttribute('data-theme', 'dark');
-</script>
-</body>
-</html>
+      appId: "1:473859049478:web:dc9f77cb674c11
