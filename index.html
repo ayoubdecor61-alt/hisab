@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ورشة أيوب - النظام السحابي</title>
+    <title>ورشة أيوب - Firestore السحابي</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
     <style>
         :root { --bg: #f4f7f6; --card: #ffffff; --text: #2d3436; --accent: #0984e3; --border: #dfe6e9; --today: #fff9db; --danger: #d63031; --success: #00b894; }
         [data-theme="dark"] { --bg: #2d3436; --card: #353b48; --text: #f5f6fa; --accent: #45aaf2; --border: #4b4b4b; --today: #485460; }
@@ -30,11 +30,12 @@
         .final-amount { font-size: 24px; font-weight: 900; }
         .pos { color: var(--success); } .neg { color: var(--danger); }
         .hidden { display: none !important; }
+        #status-bar { font-size: 10px; text-align: center; padding: 5px; font-weight: bold; }
     </style>
 </head>
 <body>
 <div class="container">
-    <div id="status" style="font-size: 10px; text-align: center; padding: 5px; opacity: 0.5;">جاري الاتصال بالسحابة...</div>
+    <div id="status-bar">جاري المزامنة...</div>
     <div id="mainPage">
         <div class="header"><h3>ورشة أيوب للألمنيوم</h3><button onclick="toggleTheme()" style="border:none; background:none; cursor:pointer; font-size:20px;">🌙</button></div>
         <div class="card">
@@ -43,11 +44,12 @@
         </div>
         <div id="workersList"></div>
     </div>
+
     <div id="detailsPage" class="hidden">
         <div id="adminControls">
             <button class="btn" style="background:#636e72; color:white; width:auto; padding:8px 20px; font-size:12px;" onclick="showMain()">← رجوع للقائمة</button>
         </div>
-       
+        
         <h2 id="currentWorkerTitle" class="worker-title">...</h2>
         <div class="manual-entry">
             <div><label class="pos">حق له سابق (+)</label><input type="number" id="manualHaq" onchange="updateManual()" placeholder="0"></div>
@@ -63,7 +65,7 @@
                 <thead><tr><th>اليوم</th><th>أجر</th><th>سلفة</th><th>ملاحظة</th></tr></thead>
                 <tbody id="tableBody"></tbody>
             </table>
-           
+            
             <div class="final-box">
                 <span style="font-size:11px; font-weight:bold;">الصافي النهائي:</span>
                 <div id="finalResult" class="final-amount">0 د.ج</div>
@@ -76,42 +78,40 @@
         </div>
     </div>
 </div>
+
 <script>
     const firebaseConfig = {
       apiKey: "AIzaSyCQA5QZLrR5er6n6r1WKx2pG-PaOvdpgeg",
       authDomain: "hisab-aluminium.firebaseapp.com",
-      databaseURL: "https://hisab-aluminium-default-rtdb.firebaseio.com/",
       projectId: "hisab-aluminium",
       storageBucket: "hisab-aluminium.firebasestorage.app",
       messagingSenderId: "473859049478",
       appId: "1:473859049478:web:dc9f77cb674c11ff2fdb87"
     };
+
     firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-   
+    const db = firebase.firestore();
+
+    // تفعيل العمل بدون إنترنت (Offline Persistence)
+    db.enablePersistence().catch((err) => {
+        console.error("Persistence failed", err.code);
+    });
+
     let workers = {}, currentId = null, weekOffset = 0, isViewOnly = false;
     const days = ["السبت", "الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة"];
-    const displayOrder = ["السبت", "الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة"];
 
-    // فحص رابط المشاهدة فقط
     const urlParams = new URLSearchParams(window.location.search);
     const viewId = urlParams.get('view');
     if(viewId) { currentId = viewId; isViewOnly = true; }
 
-    // مراقبة البيانات + حالة الاتصال
-    db.ref('workers').on('value', (snap) => {
-        workers = snap.val() || {};
+    // جلب البيانات من Firestore
+    db.collection("workers").onSnapshot((snapshot) => {
+        workers = {};
+        snapshot.forEach((doc) => {
+            workers[doc.id] = doc.data();
+        });
+        document.getElementById('status-bar').innerHTML = snapshot.metadata.fromCache ? "⚠️ أوفلاين (سيتم الرفع لاحقاً)" : "✅ متصل وسحابي";
         render();
-    });
-
-    // حالة الاتصال بالسحابة (تعمل حتى لو غير متصل)
-    const connectedRef = db.ref(".info/connected");
-    connectedRef.on("value", (snap) => {
-        if (snap.val() === true) {
-            document.getElementById('status').innerHTML = "✅ متصل بالسحابة";
-        } else {
-            document.getElementById('status').innerHTML = "❌ غير متصل (التعديلات محفوظة محلياً وسيتم المزامنة تلقائياً)";
-        }
     });
 
     function render() {
@@ -147,37 +147,27 @@
     function renderDetails(id) {
         const w = workers[id];
         if(!w) return;
-
         document.getElementById('currentWorkerTitle').innerText = w.name;
 
-        // إخفاء الـ 0 في الحقول
         const mH = document.getElementById('manualHaq');
         const mD = document.getElementById('manualDin');
         mH.value = (w.manualHaq || 0) === 0 ? '' : w.manualHaq;
         mD.value = (w.manualDin || 0) === 0 ? '' : w.manualDin;
         if(isViewOnly) { mH.disabled = true; mD.disabled = true; }
 
-        // تسمية الأسبوع
-        let weekLabelText = "الأسبوع الحالي";
-        if (weekOffset !== 0) {
-            const abs = Math.abs(weekOffset);
-            weekLabelText = weekOffset > 0 ? `بعد ${abs} أسابيع` : `منذ ${abs} أسابيع`;
-        }
-        document.getElementById('weekLabel').innerText = weekLabelText;
+        document.getElementById('weekLabel').innerText = weekOffset === 0 ? "الأسبوع الحالي" : (weekOffset > 0 ? `بعد ${weekOffset} أسابيع` : `منذ ${Math.abs(weekOffset)} أسابيع`);
 
         const weekId = getWeekId(weekOffset);
         const weekData = (w.weeks && w.weeks[weekId]) || { rs: Array(7).fill(0), as: Array(7).fill(0), notes: Array(7).fill("") };
 
         const tbody = document.getElementById('tableBody');
         tbody.innerHTML = '';
-        const todayIndex = (new Date().getDay() + 1) % 7;
+        const todayIndex = (new Date().getDay() + 1) % 7; 
 
-        displayOrder.forEach((dayName, i) => {
-            const idx = days.indexOf(dayName);
-            const r = (weekData.rs && weekData.rs[idx] !== undefined) ? weekData.rs[idx] : 0;
-            const a = (weekData.as && weekData.as[idx] !== undefined) ? weekData.as[idx] : 0;
-            const n = (weekData.notes && weekData.notes[idx] !== undefined) ? weekData.notes[idx] : "";
-
+        days.forEach((dayName, idx) => {
+            const r = weekData.rs[idx] || 0;
+            const a = weekData.as[idx] || 0;
+            const n = weekData.notes[idx] || "";
             const tr = document.createElement('tr');
             if (idx === todayIndex && weekOffset === 0) tr.className = 'today-row';
 
@@ -186,36 +176,39 @@
             } else {
                 tr.innerHTML = `
                     <td>${dayName}</td>
-                    <td><input type="number" value="${r === 0 ? '' : r}" placeholder="0" onchange="updateVal('${weekId}', ${idx}, 'rs', this.value)"></td>
-                    <td><input type="number" value="${a === 0 ? '' : a}" placeholder="0" onchange="updateVal('${weekId}', ${idx}, 'as', this.value)"></td>
+                    <td><input type="number" value="${r || ''}" placeholder="0" onchange="updateVal('${weekId}', ${idx}, 'rs', this.value)"></td>
+                    <td><input type="number" value="${a || ''}" placeholder="0" onchange="updateVal('${weekId}', ${idx}, 'as', this.value)"></td>
                     <td><input type="text" value="${n}" onchange="updateVal('${weekId}', ${idx}, 'notes', this.value)"></td>`;
             }
             tbody.appendChild(tr);
         });
-
         calculateTotal(w);
     }
 
     function updateVal(weekId, idx, type, val) {
-        const ref = db.ref(`workers/${currentId}/weeks/${weekId}/${type}/${idx}`);
-        if (type === 'notes') {
-            ref.set(val || "");
-        } else {
-            ref.set(parseFloat(val) || 0);
-        }
+        const w = workers[currentId];
+        let updatedWeeks = w.weeks || {};
+        if (!updatedWeeks[weekId]) updatedWeeks[weekId] = { rs: Array(7).fill(0), as: Array(7).fill(0), notes: Array(7).fill("") };
+        
+        if (type === 'notes') updatedWeeks[weekId][type][idx] = val || "";
+        else updatedWeeks[weekId][type][idx] = parseFloat(val) || 0;
+
+        db.collection("workers").doc(currentId).update({ weeks: updatedWeeks });
     }
 
     function updateManual() {
-        db.ref(`workers/${currentId}/manualHaq`).set(parseFloat(document.getElementById('manualHaq').value) || 0);
-        db.ref(`workers/${currentId}/manualDin`).set(parseFloat(document.getElementById('manualDin').value) || 0);
+        db.collection("workers").doc(currentId).update({
+            manualHaq: parseFloat(document.getElementById('manualHaq').value) || 0,
+            manualDin: parseFloat(document.getElementById('manualDin').value) || 0
+        });
     }
 
     function calculateTotal(w) {
         let total = (parseFloat(w.manualHaq) || 0) - (parseFloat(w.manualDin) || 0);
         if (w.weeks) {
             for (let wid in w.weeks) {
-                const rSum = (w.weeks[wid].rs || []).reduce((a, b) => parseFloat(a || 0) + parseFloat(b || 0), 0);
-                const aSum = (w.weeks[wid].as || []).reduce((a, b) => parseFloat(a || 0) + parseFloat(b || 0), 0);
+                const rSum = (w.weeks[wid].rs || []).reduce((a, b) => a + (parseFloat(b) || 0), 0);
+                const aSum = (w.weeks[wid].as || []).reduce((a, b) => a + (parseFloat(b) || 0), 0);
                 total += (rSum - aSum);
             }
         }
@@ -226,38 +219,27 @@
     function addWorker() {
         const name = document.getElementById('newWorkerName').value.trim();
         if (name) {
-            db.ref('workers').push({ name: name, manualHaq: 0, manualDin: 0 });
+            db.collection("workers").add({ name: name, manualHaq: 0, manualDin: 0, weeks: {} });
             document.getElementById('newWorkerName').value = '';
         }
     }
 
-    function showMain() {
-        currentId = null;
-        render();
-    }
+    function showMain() { currentId = null; render(); }
 
     function shareLink() {
         const link = window.location.origin + window.location.pathname + "?view=" + currentId;
-        const el = document.createElement('textarea');
-        el.value = link;
-        document.body.appendChild(el);
-        el.select();
-        document.execCommand('copy');
-        document.body.removeChild(el);
-        alert("✅ تم نسخ رابط المشاهدة بنجاح!");
+        navigator.clipboard.writeText(link).then(() => alert("✅ تم نسخ رابط المشاهدة!"));
     }
 
     function resetAccount() {
         if (confirm("تصفير الحساب؟")) {
-            db.ref(`workers/${currentId}/weeks`).remove();
-            db.ref(`workers/${currentId}/manualHaq`).set(0);
-            db.ref(`workers/${currentId}/manualDin`).set(0);
+            db.collection("workers").doc(currentId).update({ weeks: {}, manualHaq: 0, manualDin: 0 });
         }
     }
 
     function deleteWorker() {
         if (confirm("حذف العامل نهائياً؟")) {
-            db.ref(`workers/${currentId}`).remove();
+            db.collection("workers").doc(currentId).delete();
             showMain();
         }
     }
@@ -271,11 +253,7 @@
         return d.toISOString().split('T')[0];
     }
 
-    function changeWeek(dir) {
-        weekOffset += dir;
-        render();
-    }
-
+    function changeWeek(dir) { weekOffset += dir; render(); }
     function toggleTheme() {
         const t = document.body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
         document.body.setAttribute('data-theme', t);
