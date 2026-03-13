@@ -50,8 +50,8 @@
        
         <h2 id="currentWorkerTitle" class="worker-title">...</h2>
         <div class="manual-entry">
-            <div><label class="pos">حق له سابق (+)</label><input type="number" id="manualHaq" onchange="updateManual()"></div>
-            <div><label class="neg">دين عليه سابق (-)</label><input type="number" id="manualDin" onchange="updateManual()"></div>
+            <div><label class="pos">حق له سابق (+)</label><input type="number" id="manualHaq" onchange="updateManual()" placeholder="0"></div>
+            <div><label class="neg">دين عليه سابق (-)</label><input type="number" id="manualDin" onchange="updateManual()" placeholder="0"></div>
         </div>
         <div class="week-nav">
             <button class="nav-btn" onclick="changeWeek(-1)">◀ السابق</button>
@@ -92,21 +92,34 @@
     let workers = {}, currentId = null, weekOffset = 0, isViewOnly = false;
     const days = ["السبت", "الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة"];
     const displayOrder = ["السبت", "الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة"];
-    // فحص الرابط
+
+    // فحص رابط المشاهدة فقط
     const urlParams = new URLSearchParams(window.location.search);
     const viewId = urlParams.get('view');
     if(viewId) { currentId = viewId; isViewOnly = true; }
+
+    // مراقبة البيانات + حالة الاتصال
     db.ref('workers').on('value', (snap) => {
         workers = snap.val() || {};
-        document.getElementById('status').innerHTML = "✅ متصل";
         render();
     });
+
+    // حالة الاتصال بالسحابة (تعمل حتى لو غير متصل)
+    const connectedRef = db.ref(".info/connected");
+    connectedRef.on("value", (snap) => {
+        if (snap.val() === true) {
+            document.getElementById('status').innerHTML = "✅ متصل بالسحابة";
+        } else {
+            document.getElementById('status').innerHTML = "❌ غير متصل (التعديلات محفوظة محلياً وسيتم المزامنة تلقائياً)";
+        }
+    });
+
     function render() {
         if(isViewOnly) {
             document.getElementById('mainPage').classList.add('hidden');
+            document.getElementById('detailsPage').classList.remove('hidden');
             document.getElementById('adminControls').classList.add('hidden');
             document.getElementById('adminActions').classList.add('hidden');
-            document.getElementById('detailsPage').classList.remove('hidden');
             renderDetails(currentId);
         } else if (!currentId) {
             document.getElementById('mainPage').classList.remove('hidden');
@@ -118,6 +131,7 @@
             renderDetails(currentId);
         }
     }
+
     function renderList() {
         const list = document.getElementById('workersList');
         list.innerHTML = '';
@@ -129,101 +143,143 @@
             list.appendChild(div);
         }
     }
+
     function renderDetails(id) {
         const w = workers[id];
         if(!w) return;
+
         document.getElementById('currentWorkerTitle').innerText = w.name;
-       
+
+        // إخفاء الـ 0 في الحقول
         const mH = document.getElementById('manualHaq');
         const mD = document.getElementById('manualDin');
-        mH.value = w.manualHaq || 0; mD.value = w.manualDin || 0;
+        mH.value = (w.manualHaq || 0) === 0 ? '' : w.manualHaq;
+        mD.value = (w.manualDin || 0) === 0 ? '' : w.manualDin;
         if(isViewOnly) { mH.disabled = true; mD.disabled = true; }
+
+        // تسمية الأسبوع
         let weekLabelText = "الأسبوع الحالي";
         if (weekOffset !== 0) {
-            const absOffset = Math.abs(weekOffset);
-            weekLabelText = weekOffset > 0 ? "بعد " + absOffset + " أسابيع" : "منذ " + absOffset + " أسابيع";
+            const abs = Math.abs(weekOffset);
+            weekLabelText = weekOffset > 0 ? `بعد ${abs} أسابيع` : `منذ ${abs} أسابيع`;
         }
         document.getElementById('weekLabel').innerText = weekLabelText;
+
         const weekId = getWeekId(weekOffset);
         const weekData = (w.weeks && w.weeks[weekId]) || { rs: Array(7).fill(0), as: Array(7).fill(0), notes: Array(7).fill("") };
-       
+
         const tbody = document.getElementById('tableBody');
         tbody.innerHTML = '';
-        const jsDay = new Date().getDay();
-        const ourTodayIndex = (jsDay + 1) % 7;
-        displayOrder.forEach(dayName => {
+        const todayIndex = (new Date().getDay() + 1) % 7;
+
+        displayOrder.forEach((dayName, i) => {
             const idx = days.indexOf(dayName);
-            const r = weekData.rs && weekData.rs[idx] ? weekData.rs[idx] : 0;
-            const a = weekData.as && weekData.as[idx] ? weekData.as[idx] : 0;
-            const n = weekData.notes && weekData.notes[idx] ? weekData.notes[idx] : "";
-           
+            const r = (weekData.rs && weekData.rs[idx] !== undefined) ? weekData.rs[idx] : 0;
+            const a = (weekData.as && weekData.as[idx] !== undefined) ? weekData.as[idx] : 0;
+            const n = (weekData.notes && weekData.notes[idx] !== undefined) ? weekData.notes[idx] : "";
+
             const tr = document.createElement('tr');
-            if(idx === ourTodayIndex && weekOffset === 0) tr.className = 'today-row';
-           
+            if (idx === todayIndex && weekOffset === 0) tr.className = 'today-row';
+
             if(isViewOnly) {
                 tr.innerHTML = `<td>${dayName}</td><td class="pos">${r}</td><td class="neg">${a}</td><td>${n}</td>`;
             } else {
                 tr.innerHTML = `
                     <td>${dayName}</td>
-                    <td><input type="number" value="${r}" onchange="updateVal(${idx}, 'rs', this.value)"></td>
-                    <td><input type="number" value="${a}" onchange="updateVal(${idx}, 'as', this.value)"></td>
-                    <td><input type="text" value="${n}" onchange="updateVal(${idx}, 'notes', this.value)"></td>`;
+                    <td><input type="number" value="${r === 0 ? '' : r}" placeholder="0" onchange="updateVal('${weekId}', ${idx}, 'rs', this.value)"></td>
+                    <td><input type="number" value="${a === 0 ? '' : a}" placeholder="0" onchange="updateVal('${weekId}', ${idx}, 'as', this.value)"></td>
+                    <td><input type="text" value="${n}" onchange="updateVal('${weekId}', ${idx}, 'notes', this.value)"></td>`;
             }
             tbody.appendChild(tr);
         });
+
         calculateTotal(w);
     }
-    function updateVal(idx, type, val) {
-        const wid = getWeekId(weekOffset);
-        const ref = db.ref(`workers/${currentId}/weeks/${wid}/${type}/${idx}`);
+
+    function updateVal(weekId, idx, type, val) {
+        const ref = db.ref(`workers/${currentId}/weeks/${weekId}/${type}/${idx}`);
         if (type === 'notes') {
-            ref.set(val);
+            ref.set(val || "");
         } else {
             ref.set(parseFloat(val) || 0);
         }
     }
+
     function updateManual() {
         db.ref(`workers/${currentId}/manualHaq`).set(parseFloat(document.getElementById('manualHaq').value) || 0);
         db.ref(`workers/${currentId}/manualDin`).set(parseFloat(document.getElementById('manualDin').value) || 0);
     }
+
     function calculateTotal(w) {
         let total = (parseFloat(w.manualHaq) || 0) - (parseFloat(w.manualDin) || 0);
-        if(w.weeks) {
-            for(let wid in w.weeks) {
-                const rSum = (w.weeks[wid].rs || []).reduce((a,b)=>parseFloat(a||0)+parseFloat(b||0), 0);
-                const aSum = (w.weeks[wid].as || []).reduce((a,b)=>parseFloat(a||0)+parseFloat(b||0), 0);
+        if (w.weeks) {
+            for (let wid in w.weeks) {
+                const rSum = (w.weeks[wid].rs || []).reduce((a, b) => parseFloat(a || 0) + parseFloat(b || 0), 0);
+                const aSum = (w.weeks[wid].as || []).reduce((a, b) => parseFloat(a || 0) + parseFloat(b || 0), 0);
                 total += (rSum - aSum);
             }
         }
         document.getElementById('finalResult').innerText = total.toLocaleString() + " د.ج";
         document.getElementById('finalResult').className = 'final-amount ' + (total >= 0 ? 'pos' : 'neg');
     }
+
     function addWorker() {
         const name = document.getElementById('newWorkerName').value.trim();
-        if(name) { db.ref('workers').push({ name: name, manualHaq: 0, manualDin: 0 }); document.getElementById('newWorkerName').value = ''; }
+        if (name) {
+            db.ref('workers').push({ name: name, manualHaq: 0, manualDin: 0 });
+            document.getElementById('newWorkerName').value = '';
+        }
     }
+
     function showMain() {
         currentId = null;
         render();
     }
+
     function shareLink() {
         const link = window.location.origin + window.location.pathname + "?view=" + currentId;
-        const el = document.createElement('textarea'); el.value = link; document.body.appendChild(el); el.select();
-        document.execCommand('copy'); document.body.removeChild(el);
-        alert("تم نسخ رابط المشاهدة بنجاح!");
+        const el = document.createElement('textarea');
+        el.value = link;
+        document.body.appendChild(el);
+        el.select();
+        document.execCommand('copy');
+        document.body.removeChild(el);
+        alert("✅ تم نسخ رابط المشاهدة بنجاح!");
     }
-    function resetAccount() { if(confirm("تصفير الحساب؟")) { db.ref(`workers/${currentId}/weeks`).remove(); db.ref(`workers/${currentId}/manualHaq`).set(0); db.ref(`workers/${currentId}/manualDin`).set(0); } }
-    function deleteWorker() { if(confirm("حذف العامل؟")) { db.ref(`workers/${currentId}`).remove(); showMain(); } }
-    function getWeekId(offset = 0) { 
-        const d = new Date(); 
-        d.setDate(d.getDate() + (offset * 7)); 
-        const day = d.getDay(); 
-        const diff = (day - 6 + 7) % 7; 
-        d.setDate(d.getDate() - diff); 
-        return d.toISOString().split('T')[0]; 
+
+    function resetAccount() {
+        if (confirm("تصفير الحساب؟")) {
+            db.ref(`workers/${currentId}/weeks`).remove();
+            db.ref(`workers/${currentId}/manualHaq`).set(0);
+            db.ref(`workers/${currentId}/manualDin`).set(0);
+        }
     }
-    function changeWeek(dir) { weekOffset += dir; render(); }
-    function toggleTheme() { const t = document.body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'; document.body.setAttribute('data-theme', t); }
+
+    function deleteWorker() {
+        if (confirm("حذف العامل نهائياً؟")) {
+            db.ref(`workers/${currentId}`).remove();
+            showMain();
+        }
+    }
+
+    function getWeekId(offset = 0) {
+        const d = new Date();
+        d.setDate(d.getDate() + offset * 7);
+        const day = d.getDay();
+        const diff = (day - 6 + 7) % 7;
+        d.setDate(d.getDate() - diff);
+        return d.toISOString().split('T')[0];
+    }
+
+    function changeWeek(dir) {
+        weekOffset += dir;
+        render();
+    }
+
+    function toggleTheme() {
+        const t = document.body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+        document.body.setAttribute('data-theme', t);
+    }
 </script>
 </body>
 </html>
