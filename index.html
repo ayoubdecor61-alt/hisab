@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>حسابات أيوب - النسخة 39</title>
+
+    <!-- أيقونة الصفحة (Favicon) - حرف P برتقالي -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231e1e1e'/><text x='50%' y='55%' dominant-baseline='central' text-anchor='middle' font-family='Arial, sans-serif' font-weight='900' font-size='65' fill='%23e67e22'>P</text></svg>">
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     
     <style>
@@ -27,7 +31,7 @@
         .is-open .arrow { transform: rotate(180deg); }
         .is-open .collapsed-content { display: block; }
 
-        /* تنسيق الأعمدة لجدول القياسات (يحتوي على خانة الكمية) */
+        /* تنسيق الأعمدة لجدول القياسات */
         .meas-header { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1.2fr 0.5fr; gap: 5px; font-size: 11px; color: #888; text-align: center; border-bottom: 1px solid var(--border); padding-bottom: 5px; margin-bottom: 8px; }
         .meas-row { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1.2fr 0.5fr; gap: 5px; margin-bottom: 10px; align-items: center; }
         
@@ -550,41 +554,18 @@
         document.getElementById('pdfAmountPaid').innerText = res.paid.toLocaleString() + ' دج';
         document.getElementById('pdfAmountRemaining').innerText = res.remaining.toLocaleString() + ' دج';
         
-        const wrapper = document.getElementById('pdfWrapper'); wrapper.classList.remove('hidden');
-        
+        const element = document.getElementById('pdfTemplate');
         const opt = {
             margin: 10,
-            filename: `كشف_حساب_${p.name}.pdf`,
+            filename: `مشروع_${p.name}.pdf`,
             image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { scale: 2, useCORS: true },
+            html2canvas: { scale: 2 },
             jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
         };
-        
-        html2pdf().from(document.getElementById('pdfTemplate')).set(opt).save().then(() => {
-            wrapper.classList.add('hidden');
-        });
+        html2pdf().set(opt).from(element).save();
     }
 
-    /* === الحاسبة العائمة === */
-    function toggleCalc() {
-        const box = document.getElementById('calcBox');
-        box.style.display = (box.style.display === 'block') ? 'none' : 'block';
-    }
-    function pressC(val) {
-        if(cExpr === "0") cExpr = "";
-        cExpr += val; document.getElementById('calcDisplay').innerText = cExpr;
-    }
-    function clearC() { cExpr = "0"; document.getElementById('calcDisplay').innerText = "0"; }
-    function backC() {
-        cExpr = cExpr.slice(0, -1); if(cExpr === "") cExpr = "0";
-        document.getElementById('calcDisplay').innerText = cExpr;
-    }
-    function resC() {
-        try { cExpr = eval(cExpr).toString(); } catch(e) { cExpr = "Error"; }
-        document.getElementById('calcDisplay').innerText = cExpr;
-    }
-
-    // التشغيل المبدئي
+    // التشغيل الأولي
     renderList();
 </script>
 </body>
