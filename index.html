@@ -3,261 +3,589 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ورشة أيوب - Firestore السحابي</title>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <title>حسابات أيوب - النسخة 39</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
     <style>
-        :root { --bg: #f4f7f6; --card: #ffffff; --text: #2d3436; --accent: #0984e3; --border: #dfe6e9; --today: #fff9db; --danger: #d63031; --success: #00b894; }
-        [data-theme="dark"] { --bg: #2d3436; --card: #353b48; --text: #f5f6fa; --accent: #45aaf2; --border: #4b4b4b; --today: #485460; }
-        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg); color: var(--text); padding: 10px; margin: 0; transition: 0.3s; }
+        :root { 
+            --bg: #121212; --card: #1e1e1e; --text: #f5f6fa; --accent: #e67e22; 
+            --border: #333; --success: #2ecc71; --purple: #a29bfe; --gold: #f1c40f; --danger: #e74c3c; 
+        }
+        body.light-mode { --bg: #f0f2f5; --card: #ffffff; --text: #2c3e50; --border: #ddd; --accent: #d35400; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); padding: 10px; margin: 0; transition: 0.3s; }
         .container { max-width: 500px; margin: auto; }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-        .card { background: var(--card); padding: 15px; border-radius: 18px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); margin-bottom: 15px; border: 1px solid var(--border); }
-        .worker-title { text-align: center; font-size: 26px; font-weight: 900; color: var(--accent); margin: 5px 0 10px 0; border-bottom: 2px solid var(--accent); padding-bottom: 5px; }
-        .manual-entry { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 15px; background: rgba(0,0,0,0.02); padding: 10px; border-radius: 12px; }
-        .manual-entry label { font-size: 11px; display: block; margin-bottom: 3px; font-weight: bold; text-align: center; }
-        .week-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; background: var(--accent); color: white; padding: 8px; border-radius: 10px; }
-        .nav-btn { background: rgba(255,255,255,0.25); border: none; color: white; padding: 5px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; }
-        .worker-item { display: flex; justify-content: space-between; align-items: center; padding: 18px; border: 1px solid var(--border); border-radius: 14px; margin-bottom: 10px; background: var(--card); cursor: pointer; font-weight: bold; font-size: 16px; box-shadow: 0 2px 5px rgba(0,0,0,0.03); }
-        .btn { padding: 12px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; width: 100%; font-size: 15px; margin-top: 5px; }
-        .btn-main { background: var(--accent); color: white; }
-        .btn-share { background: #6c5ce7; color: white; }
-        input { width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--card); color: var(--text); text-align: center; font-size: 14px; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { border: 1px solid var(--border); padding: 5px; text-align: center; font-size: 12px; }
-        .today-row { background-color: var(--today) !important; font-weight: bold; }
-        .final-box { margin-top: 15px; padding: 12px; border-radius: 12px; text-align: center; border: 2px solid var(--accent); background: rgba(9, 132, 227, 0.05); }
-        .final-amount { font-size: 24px; font-weight: 900; }
-        .pos { color: var(--success); } .neg { color: var(--danger); }
+        .card { background: var(--card); padding: 15px; border-radius: 18px; margin-bottom: 15px; border: 1px solid var(--border); }
+        
+        .admin-section { display: flex; gap: 8px; margin-top: 45px; margin-bottom: 15px; }
+        .btn-tool { flex: 1; padding: 10px; font-size: 11px; border-radius: 10px; border: 1px solid var(--border); background: var(--card); color: var(--text); cursor: pointer; font-weight: bold; }
+
+        .monthly-stats { background: linear-gradient(135deg, var(--accent), #d35400); color: white; padding: 15px; border-radius: 20px; text-align: center; margin-bottom: 15px; }
+        
+        .collapsible-header { display: flex; justify-content: space-between; align-items: center; cursor: pointer; padding: 5px 0; }
+        .arrow { transition: transform 0.3s; pointer-events: none; }
+        .collapsed-content { display: none; }
+        .is-open .arrow { transform: rotate(180deg); }
+        .is-open .collapsed-content { display: block; }
+
+        /* تنسيق الأعمدة لجدول القياسات (يحتوي على خانة الكمية) */
+        .meas-header { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1.2fr 0.5fr; gap: 5px; font-size: 11px; color: #888; text-align: center; border-bottom: 1px solid var(--border); padding-bottom: 5px; margin-bottom: 8px; }
+        .meas-row { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1.2fr 0.5fr; gap: 5px; margin-bottom: 10px; align-items: center; }
+        
+        /* تنسيق الأعمدة لجدول المصاريف */
+        .exp-header { display: grid; grid-template-columns: 2fr 1fr 1fr 1.2fr 1.2fr; gap: 5px; font-size: 11px; color: #888; text-align: center; border-bottom: 1px solid var(--border); padding-bottom: 5px; margin-bottom: 8px; }
+        .exp-row { display: grid; grid-template-columns: 2fr 1fr 1fr 1.2fr 1.2fr; gap: 5px; margin-bottom: 10px; align-items: center; }
+
+        input { padding: 10px 5px; border: 1px solid var(--border); border-radius: 8px; text-align: center; font-size: 14px; width: 100%; background: rgba(100,100,100,0.05); color: var(--text); outline: none; box-sizing: border-box; }
+        .row-total { font-size: 12px; font-weight: bold; text-align: center; color: var(--gold); }
+        .actions-cell { display: flex; gap: 4px; justify-content: center; }
+
+        .calc-container { background: #000; border-radius: 20px; padding: 15px; margin-bottom: 20px; display: none; direction: ltr; border: 2px solid #333; }
+        .calc-display { color: white; text-align: right; font-size: 30px; padding: 10px; min-height: 40px; }
+        .calc-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+        .calc-btn { border: none; aspect-ratio: 1/1; border-radius: 50%; font-size: 18px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .btn-num { background: #333; color: white; }
+        .btn-op { background: #FF9F0A; color: white; }
+        .btn-top { background: #A5A5A5; color: black; }
+
+        .result-card { background: var(--card); padding: 15px; border-radius: 25px; border: 2px solid var(--border); margin-top: 15px; }
+        .res-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 10px; }
+        .res-input { border: 2px solid; border-radius: 12px; padding: 8px; background: transparent; color: var(--text); text-align: center; font-size: 16px; font-weight: bold; width: 110px; outline: none; }
+        
+        .dynamic-fee-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 8px; }
+        .fee-name-input { border: 1px dashed var(--border); border-radius: 10px; padding: 6px; background: rgba(100,100,100,0.05); color: var(--text); font-size: 14px; width: 50%; outline: none; }
+        .fee-price-input { border: 2px solid var(--accent); border-radius: 12px; padding: 6px; background: transparent; color: var(--text); text-align: center; font-size: 16px; font-weight: bold; width: 100px; outline: none; }
+        
+        .final-box { background: var(--accent); color: white; padding: 15px; border-radius: 20px; text-align: center; margin-top: 15px; }
+        .amount { font-size: 28px; font-weight: 900; display: block; }
+        .btn { padding: 12px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 5px; }
         .hidden { display: none !important; }
-        #status-bar { font-size: 10px; text-align: center; padding: 5px; font-weight: bold; }
+
+        /* تنسيقات قالب الـ PDF */
+        #pdfTemplate {
+            background: #ffffff; color: #333333; padding: 30px; font-family: 'Segoe UI', Arial, sans-serif; box-sizing: border-box;
+        }
+        .pdf-header { text-align: center; border-bottom: 3px double #e67e22; padding-bottom: 15px; margin-bottom: 25px; }
+        .pdf-title { font-size: 26px; font-weight: bold; color: #d35400; margin: 0; }
+        .pdf-subtitle { font-size: 14px; color: #555; margin-top: 5px; }
+        .pdf-meta { display: flex; justify-content: space-between; margin-bottom: 25px; font-size: 14px; background: #f9f9f9; padding: 10px 15px; border-radius: 8px; border: 1px solid #ddd; }
+        .pdf-table { width: 100%; border-collapse: collapse; margin-bottom: 25px; font-size: 14px; }
+        .pdf-table th { background-color: #f2f2f2; color: #333; font-weight: bold; padding: 10px; border: 1px solid #ddd; text-align: center; }
+        .pdf-table td { padding: 10px; border: 1px solid #ddd; text-align: center; }
+        .pdf-summary { width: 55%; margin-right: auto; margin-left: 0; border-collapse: collapse; font-size: 15px; }
+        .pdf-summary td { padding: 8px; border: 1px solid #ddd; }
+        .pdf-summary td.label { background-color: #f9f9f9; font-weight: bold; width: 60%; text-align: right; }
+        .pdf-summary td.value { text-align: left; font-weight: bold; }
+        .pdf-summary .final-row td { background-color: #e67e22; color: white; border-color: #e67e22; }
     </style>
 </head>
-<body>
+<body class="dark-mode">
+
+<button onclick="toggleTheme()" style="position:fixed; top:10px; left:10px; z-index:1000; padding:10px; border-radius:50%; border:1px solid var(--border); background:var(--card); cursor:pointer;">☀️</button>
+
 <div class="container">
-    <div id="status-bar">جاري المزامنة...</div>
     <div id="mainPage">
-        <div class="header"><h3>ورشة أيوب للألمنيوم</h3><button onclick="toggleTheme()" style="border:none; background:none; cursor:pointer; font-size:20px;">🌙</button></div>
-        <div class="card">
-            <input type="text" id="newWorkerName" placeholder="أدخل اسم العامل الجديد...">
-            <button class="btn btn-main" onclick="addWorker()">+ إضافة عامل جديد</button>
+        <div class="admin-section">
+            <button class="btn-tool" onclick="exportData()">📤 حفظ نسخة</button>
+            <button class="btn-tool" onclick="document.getElementById('fileIn').click()">📥 استرجاع</button>
+            <input type="file" id="fileIn" class="hidden" onchange="importData(event)">
         </div>
-        <div id="workersList"></div>
+        <div class="monthly-stats">
+            <div style="font-size: 26px; font-weight: 900; letter-spacing: 1px;">MEHRIA DECOR</div>
+            <div id="todayDateDisplay" style="font-size: 13px; margin-top: 5px; opacity: 0.9;"></div>
+        </div>
+        <div class="card">
+            <input type="text" id="newProjectName" placeholder="اسم المشروع الجديد..." style="width:100%; padding:15px; border-radius:12px; border:1px solid var(--border); background:rgba(100,100,100,0.05); color:var(--text); box-sizing: border-box;">
+            <button class="btn" style="background:var(--accent); color:white; margin-top:10px;" onclick="addProject()">+ إنشاء مشروع جديد</button>
+        </div>
+        <div id="projectsList"></div>
     </div>
 
     <div id="detailsPage" class="hidden">
-        <div id="adminControls">
-            <button class="btn" style="background:#636e72; color:white; width:auto; padding:8px 20px; font-size:12px;" onclick="showMain()">← رجوع للقائمة</button>
+        <div style="display:flex; justify-content:space-between; margin-top: 45px; margin-bottom:15px; gap: 8px;">
+            <button class="btn" style="background:#666; width:auto; color:white; padding: 8px 15px; margin:0;" onclick="showMain()">← رجوع</button>
+            <button class="btn" style="background:#2980b9; width:auto; color:white; padding: 8px 15px; margin:0; flex-grow:1;" onclick="generatePDF()">📄 تحميل ملف PDF</button>
+            <button class="btn" style="background:#333; width:auto; color:white; padding: 8px 15px; margin:0;" onclick="toggleCalc()">🧮 حاسبة</button>
+        </div>
+
+        <div id="calcBox" class="calc-container">
+            <div id="calcDisplay" class="calc-display">0</div>
+            <div class="calc-grid">
+                <button class="calc-btn btn-top" onclick="clearC()">AC</button><button class="calc-btn btn-top" onclick="pressC('/')">÷</button><button class="calc-btn btn-top" onclick="backC()">⌫</button><button class="calc-btn btn-op" onclick="pressC('*')">×</button>
+                <button class="calc-btn btn-num" onclick="pressC('7')">7</button><button class="calc-btn btn-num" onclick="pressC('8')">8</button><button class="calc-btn btn-num" onclick="pressC('9')">9</button><button class="calc-btn btn-op" onclick="pressC('-')">−</button>
+                <button class="calc-btn btn-num" onclick="pressC('4')">4</button><button class="calc-btn btn-num" onclick="pressC('5')">5</button><button class="calc-btn btn-num" onclick="pressC('6')">6</button><button class="calc-btn btn-op" onclick="pressC('+')">+</button>
+                <button class="calc-btn btn-num" onclick="pressC('1')">1</button><button class="calc-btn btn-num" onclick="pressC('2')">2</button><button class="calc-btn btn-num" onclick="pressC('3')">3</button><button class="calc-btn btn-op" onclick="resC()">=</button>
+                <button class="calc-btn btn-num" style="grid-column: span 2; border-radius: 30px; aspect-ratio: auto;" onclick="pressC('0')">0</button><button class="calc-btn btn-num" onclick="pressC('.')">.</button>
+            </div>
+        </div>
+
+        <div style="text-align:center;">
+            <input type="text" id="currentProjectTitle" style="background:transparent; border:none; border-bottom:2px dashed #666; color:var(--accent); font-size:24px; font-weight:bold; text-align:center; width:90%; outline:none; margin-bottom:15px;" oninput="updateProjectName(this.value)">
+        </div>
+
+        <div class="card is-open" id="measCard">
+            <div class="collapsible-header" onclick="toggleSection('measCard')"><div style="font-weight:bold; color:var(--accent);">📏 جدول القياسات</div><div class="arrow">▼</div></div>
+            <div class="collapsed-content">
+                <div class="meas-header"><span>الجزء</span><span>طول</span><span>عرض</span><span>كمية</span><span>م²</span><span>-</span></div>
+                <div id="measurementsItems"></div>
+                <button class="btn" style="background:var(--success); color:white;" onclick="addItem()">+ إضافة قياس</button>
+            </div>
+        </div>
+
+        <div class="card is-open" id="expCard">
+            <div class="collapsible-header" onclick="toggleSection('expCard')"><div style="font-weight:bold; color:var(--purple);">💰 جدول المصاريف</div><div class="arrow">▼</div></div>
+            <div class="collapsed-content">
+                <div class="exp-header"><span>المادة</span><span>كمية</span><span>سعر</span><span>إجمالي</span><span>خيارات</span></div>
+                <div id="expensesItems"></div>
+                <button class="btn" style="background:#3498db; color:white;" onclick="addExpenseItem()">+ إضافة مادة</button>
+                <div style="margin-top:10px; text-align:left; color:var(--gold); font-weight:bold; padding-top:10px; border-top:1px solid var(--border);">المجموع: <span id="subTotalExpenses">0 دج</span></div>
+            </div>
+        </div>
+
+        <div class="result-card">
+            <div class="res-row"><span>المساحة الكلية:</span><span id="grandTotalArea" style="color:var(--gold); font-size:20px; font-weight:bold;">0 م²</span></div>
+            <div class="res-row"><span style="color:var(--success); font-weight:bold;">سعر المتر:</span><input type="text" inputmode="decimal" id="unitPrice" class="res-input" style="border-color:var(--success)" oninput="quickUpdate(true)"></div>
+            <div class="res-row"><span style="color:var(--purple); font-weight:bold;">سعر الكتابة:</span><input type="text" inputmode="decimal" id="writingPrice" class="res-input" style="border-color:var(--purple)" oninput="quickUpdate(true)"></div>
+            
+            <button class="btn" style="background:var(--card); color:var(--accent); border:1px dashed var(--accent); padding:6px; font-size:12px; margin-bottom:10px;" onclick="addNewFeeRow()">💵 + إضافة مستحقات أخرى</button>
+            
+            <div id="dynamicFeesContainer"></div>
+            
+            <div class="final-box"><span>المبلغ الإجمالي النهائي</span><span class="amount" id="finalTotal">0</span></div>
+            
+            <div class="res-row" style="margin-top: 15px;"><span style="color:var(--success); font-weight:bold;">المبلغ المدفوع:</span><input type="text" inputmode="decimal" id="amountPaid" class="res-input" style="border-color:var(--success)" oninput="quickUpdate(true)"></div>
+            <div class="res-row"><span>المبلغ المتبقي:</span><span id="amountRemaining" style="color:var(--danger); font-size:18px; font-weight:bold;">0 دج</span></div>
+            
+            <div style="margin-top:10px; display:flex; justify-content:space-between; font-weight:bold; font-size:18px; border-top: 1px solid var(--border); padding-top: 10px;"><span>الفائدة الصافية:</span><span id="netProfit" style="color:var(--success);">0 دج</span></div>
+        </div>
+        <button class="btn" style="background:transparent; color:var(--danger); border:1px solid var(--danger); margin-top:15px; margin-bottom:30px;" onclick="deleteProject()">حذف المشروع نهائياً</button>
+    </div>
+</div>
+
+<div id="pdfWrapper" class="hidden">
+    <div id="pdfTemplate" dir="rtl">
+        <div class="pdf-header">
+            <div class="pdf-title">مؤسسة مهرية للتهيئة و الديكور</div>
+            <div class="pdf-subtitle">كشف قياسات ومستحقات المشروع</div>
+        </div>
+        <div class="pdf-meta">
+            <div><strong>المشروع:</strong> <span id="pdfProjName"></span></div>
+            <div><strong>التاريخ:</strong> <span id="pdfProjDate"></span></div>
         </div>
         
-        <h2 id="currentWorkerTitle" class="worker-title">...</h2>
-        <div class="manual-entry">
-            <div><label class="pos">حق له سابق (+)</label><input type="number" id="manualHaq" onchange="updateManual()" placeholder="0"></div>
-            <div><label class="neg">دين عليه سابق (-)</label><input type="number" id="manualDin" onchange="updateManual()" placeholder="0"></div>
-        </div>
-        <div class="week-nav">
-            <button class="nav-btn" onclick="changeWeek(-1)">◀ السابق</button>
-            <span id="weekLabel">الأسبوع الحالي</span>
-            <button class="nav-btn" onclick="changeWeek(1)">التالي ▶</button>
-        </div>
-        <div class="card">
-            <table>
-                <thead><tr><th>اليوم</th><th>أجر</th><th>سلفة</th><th>ملاحظة</th></tr></thead>
-                <tbody id="tableBody"></tbody>
-            </table>
-            
-            <div class="final-box">
-                <span style="font-size:11px; font-weight:bold;">الصافي النهائي:</span>
-                <div id="finalResult" class="final-amount">0 د.ج</div>
-            </div>
-            <div id="adminActions">
-                <button class="btn btn-share" style="margin-top:15px;" onclick="shareLink()">🔗 مشاركة الحساب</button>
-                <button class="btn" style="background:var(--danger); color:white; margin-top:10px;" onclick="resetAccount()">🔄 تصفير الحساب</button>
-                <button class="btn" style="background:transparent; color:var(--danger); border:1px solid var(--danger); font-size:11px; margin-top:10px;" onclick="deleteWorker()">حذف العامل</button>
-            </div>
-        </div>
+        <h3 style="color:#d35400; border-bottom:1px solid #eee; padding-bottom:5px;">📏 جدول القياسات</h3>
+        <table class="pdf-table">
+            <thead>
+                <tr>
+                    <th>الجزء / البيان</th>
+                    <th>الطول (م)</th>
+                    <th>العرض (م)</th>
+                    <th>الكمية</th>
+                    <th>المساحة (م²)</th>
+                </tr>
+            </thead>
+            <tbody id="pdfMeasRows"></tbody>
+        </table>
+
+        <h3 style="color:#d35400; border-bottom:1px solid #eee; padding-bottom:5px;">💵 كشف الحساب الإجمالي</h3>
+        <table class="pdf-summary">
+            <tr>
+                <td class="label">المساحة الكلية:</td>
+                <td class="value" id="pdfTotalArea">0 م²</td>
+            </tr>
+            <tr>
+                <td class="label">سعر المتر المربع:</td>
+                <td class="value" id="pdfUnitPrice">0 دج</td>
+            </tr>
+            <tr>
+                <td class="label">سعر الكتابة:</td>
+                <td class="value" id="pdfWritingPrice">0 دج</td>
+            </tr>
+            <tbody id="pdfDynamicFeesRows"></tbody>
+            <tr class="final-row">
+                <td class="label" style="color:white;">المبلغ الإجمالي النهائي:</td>
+                <td class="value" id="pdfFinalTotal" style="color:white;">0 دج</td>
+            </tr>
+            <tr>
+                <td class="label" style="color: #2ecc71;">المبلغ المدفوع (تسبيق):</td>
+                <td class="value" id="pdfAmountPaid" style="color: #2ecc71;">0 دج</td>
+            </tr>
+            <tr>
+                <td class="label" style="color: #e74c3c;">المبلغ المتبقي:</td>
+                <td class="value" id="pdfAmountRemaining" style="color: #e74c3c;">0 دج</td>
+            </tr>
+        </table>
     </div>
 </div>
 
 <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyCQA5QZLrR5er6n6r1WKx2pG-PaOvdpgeg",
-      authDomain: "hisab-aluminium.firebaseapp.com",
-      projectId: "hisab-aluminium",
-      storageBucket: "hisab-aluminium.firebasestorage.app",
-      messagingSenderId: "473859049478",
-      appId: "1:473859049478:web:dc9f77cb674c11ff2fdb87"
-    };
+    const STORAGE_KEY = 'ayoub_cladding_app';
+    let projects = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+    let currentId = null; let currentViewDate = new Date(); let cExpr = "0";
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
+    function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(projects)); }
 
-    // تفعيل العمل بدون إنترنت (Offline Persistence)
-    db.enablePersistence().catch((err) => {
-        console.error("Persistence failed", err.code);
-    });
-
-    let workers = {}, currentId = null, weekOffset = 0, isViewOnly = false;
-    const days = ["السبت", "الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة"];
-
-    const urlParams = new URLSearchParams(window.location.search);
-    const viewId = urlParams.get('view');
-    if(viewId) { currentId = viewId; isViewOnly = true; }
-
-    // جلب البيانات من Firestore
-    db.collection("workers").onSnapshot((snapshot) => {
-        workers = {};
-        snapshot.forEach((doc) => {
-            workers[doc.id] = doc.data();
-        });
-        document.getElementById('status-bar').innerHTML = snapshot.metadata.fromCache ? "⚠️ أوفلاين (سيتم الرفع لاحقاً)" : "✅ متصل وسحابي";
-        render();
-    });
-
-    function render() {
-        if(isViewOnly) {
-            document.getElementById('mainPage').classList.add('hidden');
-            document.getElementById('detailsPage').classList.remove('hidden');
-            document.getElementById('adminControls').classList.add('hidden');
-            document.getElementById('adminActions').classList.add('hidden');
-            renderDetails(currentId);
-        } else if (!currentId) {
-            document.getElementById('mainPage').classList.remove('hidden');
-            document.getElementById('detailsPage').classList.add('hidden');
-            renderList();
-        } else {
-            document.getElementById('mainPage').classList.add('hidden');
-            document.getElementById('detailsPage').classList.remove('hidden');
-            renderDetails(currentId);
+    function touchProject() {
+        if(currentId && projects[currentId]) {
+            projects[currentId].date = new Date().toISOString();
         }
+    }
+
+    // تفعيل الوضع الليلي أو النهاري
+    function toggleTheme() {
+        document.body.classList.toggle('light-mode');
+        document.body.classList.toggle('dark-mode');
+    }
+
+    function toggleSection(id) {
+        document.getElementById(id).classList.toggle('is-open');
+    }
+
+    function showMain() {
+        currentId = null;
+        renderList();
+    }
+
+    function addProject() {
+        const name = document.getElementById('newProjectName').value.trim();
+        if(!name) return;
+        const id = 'P' + Date.now();
+        const defExp = ["الاليكو", "اوميغا", "فوريكس", "الخدامة", "شووو", "بماما", "لالاد"].map(l => ({ label: l, qty: '', price: '' }));
+        projects[id] = { name, items: [], price: '', writingPrice: '', paid: '', extraFees: [], date: new Date().toISOString(), expenses: defExp };
+        document.getElementById('newProjectName').value = ''; save(); renderList();
+    }
+
+    function updateProjectName(val) {
+        if(currentId && projects[currentId]) {
+            projects[currentId].name = val;
+            touchProject();
+            save();
+        }
+    }
+
+    function calculateNet(id) {
+        const p = projects[id];
+        let area = 0; 
+        (p.items || []).forEach(it => {
+            const qty = parseFloat(it.qty !== undefined && it.qty !== '' ? it.qty : 1);
+            area += (parseFloat(it.l||0) * parseFloat(it.w||0) * qty);
+        });
+        
+        let exp = 0; (p.expenses || []).forEach(ex => exp += (parseFloat(ex.qty||0) * parseFloat(ex.price||0)));
+        
+        const price = parseFloat(p.price) || 0;
+        const writing = parseFloat(p.writingPrice) || 0;
+        const paid = parseFloat(p.paid) || 0;
+        
+        let totalFees = 0;
+        (p.extraFees || []).forEach(f => totalFees += (parseFloat(f.price) || 0));
+        
+        const total = (area * price) + writing + totalFees;
+        const remaining = total - paid;
+        return { net: total - exp, area, exp, total, totalFees, paid, remaining };
     }
 
     function renderList() {
-        const list = document.getElementById('workersList');
-        list.innerHTML = '';
-        for (let id in workers) {
-            const div = document.createElement('div');
-            div.className = 'worker-item';
-            div.onclick = () => { currentId = id; weekOffset = 0; render(); };
-            div.innerHTML = `<span>👤 ${workers[id].name}</span> <span>←</span>`;
-            list.appendChild(div);
-        }
-    }
-
-    function renderDetails(id) {
-        const w = workers[id];
-        if(!w) return;
-        document.getElementById('currentWorkerTitle').innerText = w.name;
-
-        const mH = document.getElementById('manualHaq');
-        const mD = document.getElementById('manualDin');
-        mH.value = (w.manualHaq || 0) === 0 ? '' : w.manualHaq;
-        mD.value = (w.manualDin || 0) === 0 ? '' : w.manualDin;
-        if(isViewOnly) { mH.disabled = true; mD.disabled = true; }
-
-        document.getElementById('weekLabel').innerText = weekOffset === 0 ? "الأسبوع الحالي" : (weekOffset > 0 ? `بعد ${weekOffset} أسابيع` : `منذ ${Math.abs(weekOffset)} أسابيع`);
-
-        const weekId = getWeekId(weekOffset);
-        const weekData = (w.weeks && w.weeks[weekId]) || { rs: Array(7).fill(0), as: Array(7).fill(0), notes: Array(7).fill("") };
-
-        const tbody = document.getElementById('tableBody');
-        tbody.innerHTML = '';
-        const todayIndex = (new Date().getDay() + 1) % 7; 
-
-        days.forEach((dayName, idx) => {
-            const r = weekData.rs[idx] || 0;
-            const a = weekData.as[idx] || 0;
-            const n = weekData.notes[idx] || "";
-            const tr = document.createElement('tr');
-            if (idx === todayIndex && weekOffset === 0) tr.className = 'today-row';
-
-            if(isViewOnly) {
-                tr.innerHTML = `<td>${dayName}</td><td class="pos">${r}</td><td class="neg">${a}</td><td>${n}</td>`;
-            } else {
-                tr.innerHTML = `
-                    <td>${dayName}</td>
-                    <td><input type="number" value="${r || ''}" placeholder="0" onchange="updateVal('${weekId}', ${idx}, 'rs', this.value)"></td>
-                    <td><input type="number" value="${a || ''}" placeholder="0" onchange="updateVal('${weekId}', ${idx}, 'as', this.value)"></td>
-                    <td><input type="text" value="${n}" onchange="updateVal('${weekId}', ${idx}, 'notes', this.value)"></td>`;
-            }
-            tbody.appendChild(tr);
-        });
-        calculateTotal(w);
-    }
-
-    function updateVal(weekId, idx, type, val) {
-        const w = workers[currentId];
-        let updatedWeeks = w.weeks || {};
-        if (!updatedWeeks[weekId]) updatedWeeks[weekId] = { rs: Array(7).fill(0), as: Array(7).fill(0), notes: Array(7).fill("") };
+        document.getElementById('mainPage').classList.remove('hidden'); document.getElementById('detailsPage').classList.add('hidden');
+        const list = document.getElementById('projectsList'); list.innerHTML = '';
         
-        if (type === 'notes') updatedWeeks[weekId][type][idx] = val || "";
-        else updatedWeeks[weekId][type][idx] = parseFloat(val) || 0;
-
-        db.collection("workers").doc(currentId).update({ weeks: updatedWeeks });
-    }
-
-    function updateManual() {
-        db.collection("workers").doc(currentId).update({
-            manualHaq: parseFloat(document.getElementById('manualHaq').value) || 0,
-            manualDin: parseFloat(document.getElementById('manualDin').value) || 0
+        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        document.getElementById('todayDateDisplay').innerText = new Date().toLocaleDateString('ar-DZ', options);
+        
+        Object.keys(projects).sort((a,b) => new Date(projects[b].date) - new Date(projects[a].date)).forEach(id => {
+            const res = calculateNet(id);
+            const div = document.createElement('div'); div.className = 'card'; div.style.cursor = 'pointer';
+            div.onclick = () => { currentId = id; renderDetails(); };
+            
+            div.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:center; font-weight:bold;">
+                    <span>📂 ${projects[id].name}</span> 
+                    <span style="color:var(--success); font-size: 15px;">الإجمالي: ${res.total.toLocaleString()} دج</span>
+                </div>`;
+            list.appendChild(div);
         });
     }
 
-    function calculateTotal(w) {
-        let total = (parseFloat(w.manualHaq) || 0) - (parseFloat(w.manualDin) || 0);
-        if (w.weeks) {
-            for (let wid in w.weeks) {
-                const rSum = (w.weeks[wid].rs || []).reduce((a, b) => a + (parseFloat(b) || 0), 0);
-                const aSum = (w.weeks[wid].as || []).reduce((a, b) => a + (parseFloat(b) || 0), 0);
-                total += (rSum - aSum);
+    function renderDetails() {
+        const p = projects[currentId];
+        document.getElementById('mainPage').classList.add('hidden'); document.getElementById('detailsPage').classList.remove('hidden');
+        document.getElementById('currentProjectTitle').value = p.name;
+        document.getElementById('unitPrice').value = p.price || '';
+        document.getElementById('writingPrice').value = p.writingPrice || '';
+        document.getElementById('amountPaid').value = p.paid || '';
+        
+        renderItems();
+        renderExpenses();
+        renderDynamicFees();
+        quickUpdate(false);
+    }
+
+    /* === إدارة جدول القياسات === */
+    function renderItems() {
+        const list = document.getElementById('measurementsItems'); list.innerHTML = '';
+        const p = projects[currentId];
+        (p.items || []).forEach((it, idx) => {
+            const qty = it.qty !== undefined && it.qty !== '' ? it.qty : 1;
+            const rowTotal = (parseFloat(it.l||0) * parseFloat(it.w||0) * parseFloat(qty)).toFixed(2);
+            
+            const div = document.createElement('div'); div.className = 'meas-row';
+            div.innerHTML = `
+                <input type="text" placeholder="مثال: الواجهة" value="${it.label || ''}" oninput="updateItemField(${idx}, 'label', this.value)">
+                <input type="text" inputmode="decimal" placeholder="0" value="${it.l || ''}" oninput="updateItemField(${idx}, 'l', this.value)">
+                <input type="text" inputmode="decimal" placeholder="0" value="${it.w || ''}" oninput="updateItemField(${idx}, 'w', this.value)">
+                <input type="text" inputmode="decimal" placeholder="1" value="${it.qty !== undefined ? it.qty : ''}" oninput="updateItemField(${idx}, 'qty', this.value)">
+                <span class="row-total">${rowTotal} م²</span>
+                <div class="actions-cell">
+                    <button class="btn" style="background:var(--danger); color:white; padding:5px; margin:0;" onclick="removeItem(${idx})">✖</button>
+                </div>
+            `;
+            list.appendChild(div);
+        });
+    }
+
+    function addItem() {
+        const p = projects[currentId];
+        if(!p.items) p.items = [];
+        p.items.push({ label: '', l: '', w: '', qty: '' });
+        touchProject(); save(); renderItems(); quickUpdate(true);
+    }
+
+    function updateItemField(idx, field, val) {
+        const p = projects[currentId];
+        p.items[idx][field] = val;
+        touchProject(); save();
+        
+        const rows = document.getElementById('measurementsItems').children;
+        if(rows[idx]) {
+            const l = parseFloat(p.items[idx].l || 0);
+            const w = parseFloat(p.items[idx].w || 0);
+            const q = parseFloat(p.items[idx].qty !== undefined && p.items[idx].qty !== '' ? p.items[idx].qty : 1);
+            rows[idx].querySelector('.row-total').innerText = (l * w * q).toFixed(2) + ' م²';
+        }
+        quickUpdate(true);
+    }
+
+    function removeItem(idx) {
+        projects[currentId].items.splice(idx, 1);
+        touchProject(); save(); renderItems(); quickUpdate(true);
+    }
+
+    /* === إدارة جدول المصاريف === */
+    function renderExpenses() {
+        const list = document.getElementById('expensesItems'); list.innerHTML = '';
+        const p = projects[currentId];
+        (p.expenses || []).forEach((ex, idx) => {
+            const rowTotal = (parseFloat(ex.qty||0) * parseFloat(ex.price||0)).toFixed(0);
+            const div = document.createElement('div'); div.className = 'exp-row';
+            div.innerHTML = `
+                <input type="text" value="${ex.label || ''}" oninput="updateExpenseField(${idx}, 'label', this.value)">
+                <input type="text" inputmode="decimal" placeholder="0" value="${ex.qty || ''}" oninput="updateExpenseField(${idx}, 'qty', this.value)">
+                <input type="text" inputmode="decimal" placeholder="0" value="${ex.price || ''}" oninput="updateExpenseField(${idx}, 'price', this.value)">
+                <span class="row-total" style="color:var(--purple);">${rowTotal} دج</span>
+                <div class="actions-cell">
+                    <button class="btn" style="background:var(--success); color:white; padding:5px; margin:0;" onclick="duplicateExpenseItem(${idx})" title="نسخ المادة">📋</button>
+                    <button class="btn" style="background:var(--danger); color:white; padding:5px; margin:0;" onclick="removeExpenseItem(${idx})">✖</button>
+                </div>
+            `;
+            list.appendChild(div);
+        });
+    }
+
+    function addExpenseItem() {
+        const p = projects[currentId];
+        if(!p.expenses) p.expenses = [];
+        p.expenses.push({ label: '', qty: '', price: '' });
+        touchProject(); save(); renderExpenses(); quickUpdate(true);
+    }
+
+    function duplicateExpenseItem(idx) {
+        const p = projects[currentId];
+        if(!p.expenses || !p.expenses[idx]) return;
+        const currentItem = p.expenses[idx];
+        const newItem = {
+            label: currentItem.label,
+            qty: currentItem.qty,
+            price: currentItem.price
+        };
+        p.expenses.splice(idx + 1, 0, newItem);
+        touchProject(); save(); renderExpenses(); quickUpdate(true);
+    }
+
+    function updateExpenseField(idx, field, val) {
+        const p = projects[currentId];
+        p.expenses[idx][field] = val;
+        touchProject(); save();
+        const rows = document.getElementById('expensesItems').children;
+        if(rows[idx]) {
+            const q = parseFloat(p.expenses[idx].qty || 0);
+            const pr = parseFloat(p.expenses[idx].price || 0);
+            rows[idx].querySelector('.row-total').innerText = (q * pr).toFixed(0) + ' دج';
+        }
+        quickUpdate(true);
+    }
+
+    function removeExpenseItem(idx) {
+        projects[currentId].expenses.splice(idx, 1);
+        touchProject(); save(); renderExpenses(); quickUpdate(true);
+    }
+
+    /* === المستحقات الإضافية === */
+    function renderDynamicFees() {
+        const container = document.getElementById('dynamicFeesContainer'); container.innerHTML = '';
+        const p = projects[currentId];
+        (p.extraFees || []).forEach((fee, idx) => {
+            const div = document.createElement('div'); div.className = 'dynamic-fee-row';
+            div.innerHTML = `
+                <input type="text" class="fee-name-input" placeholder="اسم التكلفة..." value="${fee.label || ''}" oninput="updateDynamicFee(${idx}, 'label', this.value)">
+                <input type="text" inputmode="decimal" class="fee-price-input" placeholder="السعر" value="${fee.price || ''}" oninput="updateDynamicFee(${idx}, 'price', this.value)">
+                <button class="btn" style="background:var(--danger); color:white; width:auto; padding:6px 10px; margin:0;" onclick="removeDynamicFee(${idx})">✖</button>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    function addNewFeeRow() {
+        const p = projects[currentId];
+        if(!p.extraFees) p.extraFees = [];
+        p.extraFees.push({ label: '', price: '' });
+        touchProject(); save(); renderDynamicFees();
+    }
+
+    function updateDynamicFee(idx, field, val) {
+        const p = projects[currentId];
+        p.extraFees[idx][field] = val;
+        touchProject(); save(); quickUpdate(true);
+    }
+
+    function removeDynamicFee(idx) {
+        projects[currentId].extraFees.splice(idx, 1);
+        touchProject(); save(); renderDynamicFees(); quickUpdate(true);
+    }
+
+    /* === تحديث الحسابات السريع === */
+    function quickUpdate(shouldSave = true) {
+        if(!currentId || !projects[currentId]) return;
+        const p = projects[currentId];
+        
+        if(shouldSave) {
+            p.price = document.getElementById('unitPrice').value;
+            p.writingPrice = document.getElementById('writingPrice').value;
+            p.paid = document.getElementById('amountPaid').value;
+            touchProject(); save();
+        }
+        
+        const res = calculateNet(currentId);
+        
+        document.getElementById('grandTotalArea').innerText = res.area.toFixed(2) + ' م²';
+        document.getElementById('subTotalExpenses').innerText = res.exp.toLocaleString() + ' دج';
+        document.getElementById('finalTotal').innerText = res.total.toLocaleString() + ' دج';
+        document.getElementById('amountRemaining').innerText = res.remaining.toLocaleString() + ' دج';
+        document.getElementById('netProfit').innerText = res.net.toLocaleString() + ' دج';
+    }
+
+    function deleteProject() {
+        if(confirm('هل أنت متأكد من حذف هذا المشروع نهائياً؟')) {
+            delete projects[currentId]; save(); showMain();
+        }
+    }
+
+    /* === الحفظ والاسترجاع للنسخة الاحتياطية === */
+    function exportData() {
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(projects));
+        const dlAnchor = document.createElement('a');
+        dlAnchor.setAttribute("href", dataStr);
+        dlAnchor.setAttribute("download", `حسابات_مهرية_ديكور_${new Date().toISOString().slice(0,10)}.json`);
+        document.body.appendChild(dlAnchor); dlAnchor.click(); dlAnchor.remove();
+    }
+
+    function importData(e) {
+        const file = e.target.files[0]; if(!file) return;
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+            try {
+                const imported = JSON.parse(evt.target.result);
+                if(typeof imported === 'object') {
+                    projects = { ...projects, ...imported }; save(); renderList(); alert('تم استيراد البيانات بنجاح!');
+                }
+            } catch(ex) { alert('فشل قراءة الملف!'); }
+        };
+        reader.readAsText(file);
+    }
+
+    /* === محرك الـ PDF المحسن === */
+    function generatePDF() {
+        const p = projects[currentId];
+        const res = calculateNet(currentId);
+        
+        document.getElementById('pdfProjName').innerText = p.name;
+        document.getElementById('pdfProjDate').innerText = new Date(p.date).toLocaleDateString('ar-DZ');
+        
+        const measTbody = document.getElementById('pdfMeasRows'); measTbody.innerHTML = '';
+        (p.items || []).forEach(it => {
+            const qty = it.qty !== undefined && it.qty !== '' ? it.qty : 1;
+            const area = (parseFloat(it.l||0) * parseFloat(it.w||0) * parseFloat(qty)).toFixed(2);
+            measTbody.innerHTML += `<tr>
+                <td>${it.label || '-'}</td>
+                <td>${it.l || '0'} م</td>
+                <td>${it.w || '0'} م</td>
+                <td>${qty}</td>
+                <td style="font-weight:bold; color:#e67e22;">${area} م²</td>
+            </tr>`;
+        });
+        
+        document.getElementById('pdfTotalArea').innerText = res.area.toFixed(2) + ' م²';
+        document.getElementById('pdfUnitPrice').innerText = (parseFloat(p.price)||0).toLocaleString() + ' دج';
+        document.getElementById('pdfWritingPrice').innerText = (parseFloat(p.writingPrice)||0).toLocaleString() + ' دج';
+        
+        const dynamicFeeTbody = document.getElementById('pdfDynamicFeesRows'); dynamicFeeTbody.innerHTML = '';
+        (p.extraFees || []).forEach(f => {
+            if(f.label && f.price) {
+                dynamicFeeTbody.innerHTML += `<tr>
+                    <td class="label">${f.label}:</td>
+                    <td class="value">${(parseFloat(f.price)||0).toLocaleString()} دج</td>
+                </tr>`;
             }
-        }
-        document.getElementById('finalResult').innerText = total.toLocaleString() + " د.ج";
-        document.getElementById('finalResult').className = 'final-amount ' + (total >= 0 ? 'pos' : 'neg');
+        });
+        
+        document.getElementById('pdfFinalTotal').innerText = res.total.toLocaleString() + ' دج';
+        document.getElementById('pdfAmountPaid').innerText = res.paid.toLocaleString() + ' دج';
+        document.getElementById('pdfAmountRemaining').innerText = res.remaining.toLocaleString() + ' دج';
+        
+        const wrapper = document.getElementById('pdfWrapper'); wrapper.classList.remove('hidden');
+        
+        const opt = {
+            margin: 10,
+            filename: `كشف_حساب_${p.name}.pdf`,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2, useCORS: true },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+        
+        html2pdf().from(document.getElementById('pdfTemplate')).set(opt).save().then(() => {
+            wrapper.classList.add('hidden');
+        });
     }
 
-    function addWorker() {
-        const name = document.getElementById('newWorkerName').value.trim();
-        if (name) {
-            db.collection("workers").add({ name: name, manualHaq: 0, manualDin: 0, weeks: {} });
-            document.getElementById('newWorkerName').value = '';
-        }
+    /* === الحاسبة العائمة === */
+    function toggleCalc() {
+        const box = document.getElementById('calcBox');
+        box.style.display = (box.style.display === 'block') ? 'none' : 'block';
+    }
+    function pressC(val) {
+        if(cExpr === "0") cExpr = "";
+        cExpr += val; document.getElementById('calcDisplay').innerText = cExpr;
+    }
+    function clearC() { cExpr = "0"; document.getElementById('calcDisplay').innerText = "0"; }
+    function backC() {
+        cExpr = cExpr.slice(0, -1); if(cExpr === "") cExpr = "0";
+        document.getElementById('calcDisplay').innerText = cExpr;
+    }
+    function resC() {
+        try { cExpr = eval(cExpr).toString(); } catch(e) { cExpr = "Error"; }
+        document.getElementById('calcDisplay').innerText = cExpr;
     }
 
-    function showMain() { currentId = null; render(); }
-
-    function shareLink() {
-        const link = window.location.origin + window.location.pathname + "?view=" + currentId;
-        navigator.clipboard.writeText(link).then(() => alert("✅ تم نسخ رابط المشاهدة!"));
-    }
-
-    function resetAccount() {
-        if (confirm("تصفير الحساب؟")) {
-            db.collection("workers").doc(currentId).update({ weeks: {}, manualHaq: 0, manualDin: 0 });
-        }
-    }
-
-    function deleteWorker() {
-        if (confirm("حذف العامل نهائياً؟")) {
-            db.collection("workers").doc(currentId).delete();
-            showMain();
-        }
-    }
-
-    function getWeekId(offset = 0) {
-        const d = new Date();
-        d.setDate(d.getDate() + offset * 7);
-        const day = d.getDay();
-        const diff = (day - 6 + 7) % 7;
-        d.setDate(d.getDate() - diff);
-        return d.toISOString().split('T')[0];
-    }
-
-    function changeWeek(dir) { weekOffset += dir; render(); }
-    function toggleTheme() {
-        const t = document.body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-        document.body.setAttribute('data-theme', t);
-    }
+    // التشغيل المبدئي
+    renderList();
 </script>
 </body>
 </html>
